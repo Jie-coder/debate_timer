@@ -395,15 +395,15 @@
     document.getElementById('panelPro').addEventListener('click', (e) => {
       if (e.target.closest('.duel-reset-btn') || e.target.closest('.editable-time')) return;
       if (curMode() !== 'duel') return;
-      state.duel.active = 'pro';
-      if (!state.running) toggleRun();
+      if (!state.running) { state.duel.active = 'pro'; toggleRun(); }
+      else { state.duel.active = state.duel.active === 'pro' ? 'con' : 'pro'; }
       updateDuelActive();
     });
     document.getElementById('panelCon').addEventListener('click', (e) => {
       if (e.target.closest('.duel-reset-btn') || e.target.closest('.editable-time')) return;
       if (curMode() !== 'duel') return;
-      state.duel.active = 'con';
-      if (!state.running) toggleRun();
+      if (!state.running) { state.duel.active = 'con'; toggleRun(); }
+      else { state.duel.active = state.duel.active === 'pro' ? 'con' : 'pro'; }
       updateDuelActive();
     });
     document.getElementById('btnResetPro').addEventListener('click', (e) => {
@@ -1079,8 +1079,8 @@
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       if (e.code === 'Space') { e.preventDefault(); toggleRun(); }
       else if (e.key.toLowerCase() === 'r') resetTimer();
-      else if (e.key === ',' || e.key === '<') prevStage();
-      else if (e.key === '.' || e.key === '>') nextStage();
+      else if (e.key === ',' || e.key === '<' || e.key === 'ArrowLeft') { e.preventDefault(); prevStage(); }
+      else if (e.key === '.' || e.key === '>' || e.key === 'ArrowRight') { e.preventDefault(); nextStage(); }
       else if (e.key === '1' && curMode() === 'duel') {
         state.duel.active = 'pro';
         if (!state.running) toggleRun();

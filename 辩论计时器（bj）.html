@@ -1380,9 +1380,20 @@ main {
   justify-content: center;
 }
 
-.keyhint,
-.kbd {
+.keyhint {
   display: none !important;
+}
+
+/* Keyboard-shortcut badges in the settings drawer */
+.drawer .kbd {
+  display: inline-block !important;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--bg-2);
+  color: var(--ink-2);
+  border: 1px solid var(--border);
 }
 
 footer {
@@ -2668,15 +2679,15 @@ body[data-screen="cover"] #btnNext {
     document.getElementById('panelPro').addEventListener('click', (e) => {
       if (e.target.closest('.duel-reset-btn') || e.target.closest('.editable-time')) return;
       if (curMode() !== 'duel') return;
-      state.duel.active = 'pro';
-      if (!state.running) toggleRun();
+      if (!state.running) { state.duel.active = 'pro'; toggleRun(); }
+      else { state.duel.active = state.duel.active === 'pro' ? 'con' : 'pro'; }
       updateDuelActive();
     });
     document.getElementById('panelCon').addEventListener('click', (e) => {
       if (e.target.closest('.duel-reset-btn') || e.target.closest('.editable-time')) return;
       if (curMode() !== 'duel') return;
-      state.duel.active = 'con';
-      if (!state.running) toggleRun();
+      if (!state.running) { state.duel.active = 'con'; toggleRun(); }
+      else { state.duel.active = state.duel.active === 'pro' ? 'con' : 'pro'; }
       updateDuelActive();
     });
     document.getElementById('btnResetPro').addEventListener('click', (e) => {
@@ -3352,8 +3363,8 @@ body[data-screen="cover"] #btnNext {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       if (e.code === 'Space') { e.preventDefault(); toggleRun(); }
       else if (e.key.toLowerCase() === 'r') resetTimer();
-      else if (e.key === ',' || e.key === '<') prevStage();
-      else if (e.key === '.' || e.key === '>') nextStage();
+      else if (e.key === ',' || e.key === '<' || e.key === 'ArrowLeft') { e.preventDefault(); prevStage(); }
+      else if (e.key === '.' || e.key === '>' || e.key === 'ArrowRight') { e.preventDefault(); nextStage(); }
       else if (e.key === '1' && curMode() === 'duel') {
         state.duel.active = 'pro';
         if (!state.running) toggleRun();
@@ -3574,8 +3585,8 @@ body[data-screen="cover"] #btnNext {
       <div style="display:grid; gap:8px; font-size: 12px; color: var(--ink-2);">
         <div style="display:flex; justify-content: space-between;"><span>开始 / 暂停</span><span class="kbd">SPACE</span></div>
         <div style="display:flex; justify-content: space-between;"><span>重置</span><span class="kbd">R</span></div>
-        <div style="display:flex; justify-content: space-between;"><span>切换对辩方</span><span class="kbd">1 / 2</span></div>
-        <div style="display:flex; justify-content: space-between;"><span>下一环节</span><span class="kbd">TAB</span></div>
+        <div style="display:flex; justify-content: space-between;"><span>切换对辩方</span><span class="kbd">1 / 2 / 点击</span></div>
+        <div style="display:flex; justify-content: space-between;"><span>上一 / 下一环节</span><span class="kbd">← / → / TAB</span></div>
         <div style="display:flex; justify-content: space-between;"><span>全屏</span><span class="kbd">F</span></div>
         <div style="display:flex; justify-content: space-between;"><span>提示音</span><span class="kbd">M</span></div>
       </div>
