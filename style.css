@@ -1764,9 +1764,16 @@ body[data-screen="cover"] .brand {
 }
 
 body[data-screen="cover"] .brand-topic,
-body[data-screen="cover"] .mode-tabs,
-body[data-screen="cover"] .header-actions {
+body[data-screen="cover"] .mode-tabs {
   display: none !important;
+}
+
+/* Home page keeps settings / fullscreen / sound at the top-right */
+body[data-screen="cover"] .header-actions {
+  display: flex !important;
+  margin-top: 0 !important;
+  align-self: flex-start !important;
+  gap: 14px !important;
 }
 
 body[data-screen="cover"] main {
@@ -1808,23 +1815,37 @@ body[data-screen="cover"] #btnNext {
 .cover-page {
   --cover-bg: var(--vf-ink, var(--ink));
   --cover-fg: var(--vf-paper, var(--bg));
-  --cover-muted: color-mix(in oklab, var(--cover-fg) 64%, transparent);
-  --cover-faint: color-mix(in oklab, var(--cover-fg) 24%, transparent);
-  --cover-pro: var(--accent, #7fb7ff);
-  --cover-con: var(--vf-warn, var(--warn));
-  width: min(100%, 1680px);
+  --cover-muted: color-mix(in oklab, var(--cover-fg) 66%, transparent);
+  --cover-faint: color-mix(in oklab, var(--cover-fg) 28%, transparent);
+  /* pro/con accents overridden per-theme below so they never match the bg */
+  --cover-pro: var(--cover-fg);
+  --cover-con: var(--cover-fg);
+  width: min(100%, 1280px);
   height: 100%;
-  min-height: min(650px, calc(100vh - 230px));
+  min-height: min(640px, calc(100vh - 230px));
   margin: 0 auto;
   display: grid;
-  grid-template-rows: auto auto auto auto;
+  grid-template-rows: auto auto;
   align-content: center;
   justify-items: center;
-  gap: clamp(18px, 3.4vh, 38px);
+  gap: clamp(36px, 6vh, 80px);
   text-align: center;
-  padding: clamp(54px, 8vh, 96px) clamp(34px, 6vw, 104px);
+  padding: clamp(48px, 7vh, 88px) clamp(40px, 6vw, 96px);
+  border-radius: clamp(20px, 2vw, 32px);
   background: var(--cover-bg);
   color: var(--cover-fg);
+}
+
+/* Per-theme pro/con colors guaranteed to contrast with the inverted cover bg */
+[data-theme="warm"] .cover-page { --cover-pro: #5b9dff; --cover-con: #ff7a52; }
+[data-theme="dark"] .cover-page { --cover-pro: #1f4fa8; --cover-con: #c4341f; }
+[data-theme="paper"] .cover-page { --cover-pro: #0b3a86; --cover-con: #c4341f; }
+
+.cover-head {
+  display: grid;
+  justify-items: center;
+  gap: clamp(20px, 3vh, 34px);
+  width: 100%;
 }
 
 .cover-visually-hidden {
@@ -1889,65 +1910,62 @@ body[data-screen="cover"] #btnNext {
 }
 
 .cover-title-rule {
-  width: clamp(54px, 6vw, 98px);
-  height: 5px;
+  width: clamp(64px, 7vw, 120px);
+  height: 4px;
   border-radius: 999px;
-  background: var(--cover-pro);
-  margin-top: -8px;
+  background: linear-gradient(90deg, var(--cover-pro), var(--cover-con));
+  margin-top: -4px;
 }
 
-.cover-schools {
+/* Matchup: 正方  VS  反方 */
+.cover-matchup {
   display: grid;
-  gap: clamp(18px, 3vh, 34px);
-  width: min(760px, 76vw);
-  margin-top: clamp(16px, 3vh, 40px);
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(24px, 5vw, 72px);
+  width: min(960px, 92%);
 }
 
-.cover-school-row {
+.cover-team {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: baseline;
-  justify-content: center;
-  gap: clamp(18px, 2.4vw, 32px);
+  justify-items: center;
+  gap: clamp(12px, 1.8vh, 20px);
+  min-width: 0;
+  cursor: text;
+}
+
+.cover-team-tag {
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: clamp(13px, 1.4vw, 18px);
+  letter-spacing: 0.14em;
+  font-weight: 600;
+  padding: 5px 18px;
+  border-radius: 999px;
+  border: 1.5px solid currentColor;
+  line-height: 1;
+}
+
+.cover-team-pro .cover-team-tag { color: var(--cover-pro); }
+.cover-team-con .cover-team-tag { color: var(--cover-con); }
+
+.cover-team-name {
+  width: 100%;
+  text-align: center;
   color: var(--cover-fg);
   font-family: Inter, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
-  font-size: clamp(26px, 3.1vw, 46px);
-  line-height: 1.15;
-}
-
-.cover-school-row span {
-  justify-self: end;
-  white-space: nowrap;
-  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
-  font-size: clamp(15px, 1.65vw, 22px);
-  letter-spacing: 0.08em;
-}
-
-.cover-school-row:first-child span {
-  color: var(--cover-pro);
-}
-
-.cover-school-row:nth-child(2) span {
-  color: var(--cover-con);
-}
-
-.cover-school-input {
-  justify-self: start;
-  width: min(520px, 52vw);
-  text-align: left;
-  color: var(--cover-fg);
+  font-size: clamp(26px, 3vw, 44px);
   font-weight: 720;
-  padding-bottom: 5px;
+  line-height: 1.15;
+  padding-bottom: 6px;
 }
 
-.cover-school-row + .cover-school-row::before {
-  content: "";
-  grid-column: 1 / -1;
-  justify-self: center;
-  width: 180px;
-  height: 1px;
-  background: var(--cover-faint);
-  margin-bottom: clamp(6px, 1.2vh, 12px);
+.cover-vs {
+  align-self: center;
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: clamp(20px, 2.2vw, 32px);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--cover-faint);
 }
 
 .stage-duel {
@@ -2094,20 +2112,19 @@ body[data-screen="cover"] #btnNext {
     min-height: 140px;
   }
 
-  .cover-school-row {
-    grid-template-columns: 1fr;
+  .cover-matchup {
+    grid-template-columns: minmax(0, 1fr);
     justify-items: center;
-    gap: 6px;
-  }
-
-  .cover-school-row span,
-  .cover-school-input {
-    justify-self: center;
-    text-align: center;
-  }
-
-  .cover-school-input {
+    gap: 16px;
     width: min(100%, 520px);
+  }
+
+  .cover-vs {
+    font-size: 18px;
+  }
+
+  .cover-team-name {
+    font-size: clamp(24px, 7vw, 34px);
   }
 
   .stage-duel .duel {

@@ -175,15 +175,24 @@
   function renderCover() {
     stage.innerHTML =
       '<section class="cover-page" aria-label="\u6bd4\u8d5b\u9996\u9875">' +
-        '<div class="cover-kicker">' +
-          '<label class="cover-visually-hidden" for="coverMatchStage">\u6bd4\u8d5b\u8d5b\u6bb5</label>' +
-          '<input id="coverMatchStage" class="cover-input cover-match-input" maxlength="40" value="' + escapeHtml(state.matchStage || '') + '" placeholder="2026 \u534e\u4e2d\u676f \u521d\u8d5b">' +
+        '<div class="cover-head">' +
+          '<div class="cover-kicker">' +
+            '<label class="cover-visually-hidden" for="coverMatchStage">\u6bd4\u8d5b\u8d5b\u6bb5</label>' +
+            '<input id="coverMatchStage" class="cover-input cover-match-input" maxlength="40" value="' + escapeHtml(state.matchStage || '') + '" placeholder="2026 \u534e\u4e2d\u676f \u521d\u8d5b">' +
+          '</div>' +
+          '<textarea id="coverTopic" class="cover-input cover-topic-input" rows="2" maxlength="80" placeholder="\u8f93\u5165\u8fa9\u9898">' + escapeHtml(state.topic || '') + '</textarea>' +
+          '<div class="cover-title-rule"></div>' +
         '</div>' +
-        '<textarea id="coverTopic" class="cover-input cover-topic-input" rows="2" maxlength="80" placeholder="\u8f93\u5165\u8fa9\u9898">' + escapeHtml(state.topic || '') + '</textarea>' +
-        '<div class="cover-title-rule"></div>' +
-        '<div class="cover-schools">' +
-          '<label class="cover-school-row" for="coverProSchool"><span>\u6b63\u65b9</span><input id="coverProSchool" class="cover-input cover-school-input" maxlength="32" value="' + escapeHtml(state.proName || '') + '" placeholder="\u6b63\u65b9\u5b66\u6821"></label>' +
-          '<label class="cover-school-row" for="coverConSchool"><span>\u53cd\u65b9</span><input id="coverConSchool" class="cover-input cover-school-input" maxlength="32" value="' + escapeHtml(state.conName || '') + '" placeholder="\u53cd\u65b9\u5b66\u6821"></label>' +
+        '<div class="cover-matchup">' +
+          '<label class="cover-team cover-team-pro" for="coverProSchool">' +
+            '<span class="cover-team-tag">\u6b63\u65b9</span>' +
+            '<input id="coverProSchool" class="cover-input cover-team-name" maxlength="32" value="' + escapeHtml(state.proName || '') + '" placeholder="\u6b63\u65b9\u5b66\u6821">' +
+          '</label>' +
+          '<div class="cover-vs" aria-hidden="true">VS</div>' +
+          '<label class="cover-team cover-team-con" for="coverConSchool">' +
+            '<span class="cover-team-tag">\u53cd\u65b9</span>' +
+            '<input id="coverConSchool" class="cover-input cover-team-name" maxlength="32" value="' + escapeHtml(state.conName || '') + '" placeholder="\u53cd\u65b9\u5b66\u6821">' +
+          '</label>' +
         '</div>' +
       '</section>';
     wireCoverInputs();
