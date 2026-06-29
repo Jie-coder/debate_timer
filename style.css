@@ -1090,12 +1090,19 @@ header {
   border: 0 !important;
   border-radius: 0 !important;
   background: transparent !important;
-  gap: clamp(18px, 3vw, 42px) !important;
+  column-gap: clamp(18px, 3vw, 42px) !important;
+  row-gap: 10px !important;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-start;
+  align-content: flex-start;
   min-width: 0;
   max-width: 100%;
 }
+
+/* Keep the stage nav block centered in the header while wrapped rows
+   fill left-to-right, so a lone second-row item aligns under the first
+   tab instead of floating in the center */
+.mode-tabs > .mode-tab { flex: 0 0 auto; }
 
 .mode-tab {
   padding: 4px 0 8px !important;
@@ -1279,6 +1286,9 @@ footer {
 
 .flow-dots {
   gap: 8px !important;
+  flex-wrap: wrap !important;
+  row-gap: 6px !important;
+  max-width: min(460px, 40vw) !important;
 }
 
 .flow-dot {
