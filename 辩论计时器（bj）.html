@@ -2173,6 +2173,30 @@ body[data-screen="cover"] #btnNext {
     { id: 's7', name: '\u7ed3\u8fa9', type: 'single', duration: 240 },
   ];
 
+  // Built-in competition formats (selectable from the drawer, not deletable)
+  const BUILT_IN_PRESETS = [
+    {
+      name: '华中杯',
+      stages: [
+        { name: '一辩申论', type: 'single', duration: 240 },
+        { name: '二辩质询', type: 'single', duration: 180 },
+        { name: '一辩申论', type: 'single', duration: 240 },
+        { name: '三辩质询', type: 'single', duration: 180 },
+        { name: '二辩申论', type: 'single', duration: 240 },
+        { name: '三辩质询', type: 'single', duration: 180 },
+        { name: '二辩申论', type: 'single', duration: 240 },
+        { name: '一辩质询', type: 'single', duration: 180 },
+        { name: '三辩申论', type: 'single', duration: 240 },
+        { name: '一辩质询', type: 'single', duration: 180 },
+        { name: '三辩申论', type: 'single', duration: 240 },
+        { name: '二辩质询', type: 'single', duration: 180 },
+        { name: '中休', type: 'single', duration: 120 },
+        { name: '结辩', type: 'single', duration: 240 },
+        { name: '结辩', type: 'single', duration: 240 },
+      ],
+    },
+  ];
+
   // Per-stage runtime cache: stageId -> { remaining, duelPro, duelCon, duelActive }
   const runtimeCache = {};
   function getRuntime(id) {
@@ -2196,7 +2220,7 @@ body[data-screen="cover"] #btnNext {
     autoFlow: false,
     proName: '\u5a01\u5357\u65e5\u65b0\u56fd\u6c11\u578b\u4e2d\u5b66',
     conName: '\u97e9\u6c5f\u4e2d\u5b66',
-    topic: '\u6211\u56fd\u5e94\u4e0d\u5e94\u8be5\u843d\u5b9e\u5168\u6c11\u5065\u4fdd\u5236\u5ea6',
+    topic: '',
     matchStage: '2026 \u534e\u4e2d\u676f \u521d\u8d5b',
     // runtime
     running: false,
@@ -2338,7 +2362,7 @@ body[data-screen="cover"] #btnNext {
             '<label class="cover-visually-hidden" for="coverMatchStage">\u6bd4\u8d5b\u8d5b\u6bb5</label>' +
             '<input id="coverMatchStage" class="cover-input cover-match-input" maxlength="40" value="' + escapeHtml(state.matchStage || '') + '" placeholder="2026 \u534e\u4e2d\u676f \u521d\u8d5b">' +
           '</div>' +
-          '<textarea id="coverTopic" class="cover-input cover-topic-input" rows="2" maxlength="80" placeholder="\u8f93\u5165\u8fa9\u9898">' + escapeHtml(state.topic || '') + '</textarea>' +
+          '<textarea id="coverTopic" class="cover-input cover-topic-input" rows="2" maxlength="80" placeholder="\u8fa9\u9898">' + escapeHtml(state.topic || '') + '</textarea>' +
           '<div class="cover-title-rule"></div>' +
         '</div>' +
         '<div class="cover-matchup">' +
@@ -2856,7 +2880,8 @@ body[data-screen="cover"] #btnNext {
       row.querySelector('.stage-type-pill').addEventListener('click', (e) => {
         if (stg.type === 'cover') return;
         stg.type = stg.type === 'duel' ? 'single' : 'duel';
-        renderStagesList();
+        delete runtimeCache[stg.id];
+        renderStagesList(); renderModeTabs(); updateFlowDots();
         if (stg.id === state.currentId) { resetTimer(); renderStage(); }
         saveState();
       });
@@ -2867,7 +2892,7 @@ body[data-screen="cover"] #btnNext {
         stg.duration = v; e.target.value = v;
         // invalidate cache so the new duration takes effect
         delete runtimeCache[stg.id];
-        if (stg.id === state.currentId && !state.running) resetTimer();
+        if (stg.id === state.currentId && !state.running) { resetTimer(); renderStage(); }
         saveState();
       });
       // delete
@@ -2963,10 +2988,26 @@ body[data-screen="cover"] #btnNext {
     const list = document.getElementById('presetList');
     if (!list) return;
     list.innerHTML = '';
+    // Built-in formats first (apply only, no edit/delete)
+    BUILT_IN_PRESETS.forEach(preset => {
+      const item = document.createElement('div');
+      item.className = 'preset-item';
+      const totalSeconds = preset.stages.reduce((sum, stg) => sum + (Number(stg.duration) || 0), 0);
+      item.innerHTML = '<div>' +
+        '<div class="preset-title">' + escapeHtml(preset.name) +
+          ' <span style="font-size:9px;opacity:.55;font-family:\'JetBrains Mono\',monospace;">内置</span></div>' +
+        '<div class="preset-meta">' + preset.stages.length + ' 个环节 · 共 ' + formatTime(totalSeconds) + '</div>' +
+        '</div>' +
+        '<div class="preset-actions">' +
+          '<button class="chip" data-action="load">套用</button>' +
+        '</div>';
+      item.querySelector('[data-action="load"]').addEventListener('click', () => loadBuiltInPreset(preset.name));
+      list.appendChild(item);
+    });
     if (timerPresets.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'preset-hint';
-      empty.textContent = '还没有保存的计时器。';
+      empty.textContent = '以上为内置赛制。你还没有保存自定义计时器。';
       list.appendChild(empty);
       return;
     }
@@ -3008,6 +3049,32 @@ body[data-screen="cover"] #btnNext {
     if (input) input.value = '';
     saveTimerPresets();
     renderPresetList();
+  }
+
+  function applyStageSet(stages, label) {
+    state.running = false;
+    const base = Date.now();
+    state.stages = stages.map((st, i) => ({
+      id: 'b' + base + '_' + i,
+      name: st.name, type: st.type, duration: st.duration,
+    }));
+    ensureCoverStage();
+    state.currentId = state.stages[0].id;
+    clearRuntimeCache();
+    resetTimer();
+    renderStagesList();
+    renderModeTabs();
+    renderStage();
+    updateFlowDots();
+    updateStartButton();
+    saveState();
+    setPresetStatus(label ? ('已套用 ' + label) : '已套用');
+  }
+
+  function loadBuiltInPreset(name) {
+    const preset = BUILT_IN_PRESETS.find(p => p.name === name);
+    if (!preset) return;
+    applyStageSet(preset.stages, preset.name);
   }
 
   function loadTimerPreset(id) {
