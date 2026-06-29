@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>辩论计时器</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body data-theme="warm">
+<div class="app" id="app">
+    <!-- Header -->
+    <header>
+      <div class="brand">
+        <div class="brand-mark"></div>
+        <textarea class="brand-topic" id="topicInput" placeholder="输入辩题…" rows="2"></textarea>
+      </div>
+
+      <div class="mode-tabs" id="modeTabs"></div>
+
+      <div class="header-actions">
+        <button class="icon-btn" id="btnSound" title="提示音 (M)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" id="iconSound">
+            <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+            <path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14"></path>
+          </svg>
+        </button>
+        <button class="icon-btn" id="btnFullscreen" title="全屏 (F)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M3 7V3h4M17 3h4v4M21 17v4h-4M7 21H3v-4"></path>
+          </svg>
+        </button>
+        <button class="icon-btn" id="btnSettings" title="设置">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main -->
+    <main>
+      <div class="stage" id="stage"></div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+      <div class="session-flow" id="sessionFlow">
+        <span class="flow-label">环节</span>
+        <div class="flow-dots" id="flowDots"></div>
+      </div>
+
+      <div class="controls">
+        <button class="btn btn-ghost" id="btnPrev" title="上一环节">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 18l-6-6 6-6"></path>
+          </svg>
+          上一环节
+        </button>
+        <button class="btn btn-primary" id="btnStart">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" id="iconPlay">
+            <polygon points="6 4 20 12 6 20 6 4"></polygon>
+          </svg>
+          <span id="startLabel">开始</span>
+        </button>
+        <button class="btn btn-ghost" id="btnNext" title="下一环节">
+          下一环节
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 6l6 6-6 6"></path>
+          </svg>
+        </button>
+      </div>
+
+      <div class="keyhint">
+        <span><span class="kbd">SPACE</span> 开始/暂停</span>
+        <span><span class="kbd">R</span> 重置</span>
+        <span><span class="kbd">,/.</span> 上/下环节</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Drawer (Settings / Tweaks) -->
+  <div class="overlay" id="overlay"></div>
+  <aside class="drawer" id="drawer">
+    <h3>
+      <span>设置</span>
+      <button class="icon-btn" id="drawerClose">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12"></path>
+        </svg>
+      </button>
+    </h3>
+
+    <div class="drawer-section">
+      <div class="drawer-section-label">外观</div>
+      <div class="field-row">
+        <span class="field-label">主题</span>
+        <div class="chip-group" id="themeGroup">
+          <button class="chip active" data-theme="warm">白底黑</button>
+          <button class="chip" data-theme="dark">黑底黄</button>
+          <button class="chip" data-theme="paper">蓝底白</button>
+        </div>
+      </div>
+      <div class="field-row vf-font-row" style="display:none">
+        <span class="field-label">字体大小</span>
+        <div class="chip-group" id="fontGroup">
+          <button class="chip" data-scale="0.9">小</button>
+          <button class="chip active" data-scale="1">中</button>
+          <button class="chip" data-scale="1.15">大</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-label" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>环节设置</span>
+        <span style="font-size:9px;opacity:.7">拖拽排序 · 可增删</span>
+      </div>
+      <div id="stagesList" class="stages-list"></div>
+      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+        <button class="chip add-chip" data-add="陈词" data-type="single" data-dur="180">+ 陈词</button>
+        <button class="chip add-chip" data-add="立论" data-type="single" data-dur="180">+ 立论</button>
+        <button class="chip add-chip" data-add="质询" data-type="single" data-dur="90">+ 质询</button>
+        <button class="chip add-chip" data-add="对辩" data-type="duel" data-dur="120">+ 对辩</button>
+        <button class="chip add-chip" data-add="自由辩论" data-type="single" data-dur="240">+ 自由辩论</button>
+        <button class="chip add-chip" data-add="结辩" data-type="single" data-dur="180">+ 结辩</button>
+        <button class="chip add-chip" data-add="自定义" data-type="single" data-dur="120">+ 自定义</button>
+      </div>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-label">计时器存储</div>
+      <div class="field-row preset-name-row">
+        <span class="field-label">名称</span>
+        <input type="text" class="input input-text" id="presetNameInput" maxlength="24" placeholder="例如：校赛决赛">
+      </div>
+      <div class="preset-save-row">
+        <button class="chip" id="savePresetBtn">保存当前计时器</button>
+        <span id="presetStatus"></span>
+      </div>
+      <div class="preset-hint">最多保存 3 个，保存内容包含环节顺序、名称和时长。</div>
+      <div id="presetList" class="preset-list"></div>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-label">双方命名</div>
+      <div class="field-row">
+        <span class="field-label">正方</span>
+        <input type="text" class="input input-text" id="proName">
+      </div>
+      <div class="field-row">
+        <span class="field-label">反方</span>
+        <input type="text" class="input input-text" id="conName">
+      </div>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-label">声音</div>
+      <div class="field-row">
+        <span class="field-label">提示音</span>
+        <div class="switch on" id="swSound"></div>
+      </div>
+      <div class="field-row">
+        <span class="field-label">最后10秒逐秒</span>
+        <div class="switch on" id="swTick"></div>
+      </div>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-label">赛程流程</div>
+      <div class="field-row">
+        <span class="field-label">自动推进到下一环节</span>
+        <div class="switch" id="swAutoFlow"></div>
+      </div>
+      <div style="font-size:11px; color: var(--ink-3); line-height: 1.5; margin-top: 8px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em;" id="flowText"></div>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-label">快捷键</div>
+      <div style="display:grid; gap:8px; font-size: 12px; color: var(--ink-2);">
+        <div style="display:flex; justify-content: space-between;"><span>开始 / 暂停</span><span class="kbd">SPACE</span></div>
+        <div style="display:flex; justify-content: space-between;"><span>重置</span><span class="kbd">R</span></div>
+        <div style="display:flex; justify-content: space-between;"><span>切换对辩方</span><span class="kbd">1 / 2</span></div>
+        <div style="display:flex; justify-content: space-between;"><span>下一环节</span><span class="kbd">TAB</span></div>
+        <div style="display:flex; justify-content: space-between;"><span>全屏</span><span class="kbd">F</span></div>
+        <div style="display:flex; justify-content: space-between;"><span>提示音</span><span class="kbd">M</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="flash" id="flash"></div>
+</body>
+</html>

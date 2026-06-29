@@ -1,0 +1,10 @@
+{
+  "name": "debate-timer",
+  "private": true,
+  "version": "1.0.0",
+  "description": "辩论计时器源码版，可维护的单页计时工具。",
+  "scripts": {
+    "build": "node scripts/build-single.js",
+    "check": "node scripts/check.js"
+  }
+}
