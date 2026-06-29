@@ -131,15 +131,14 @@
 
     <div class="drawer-section">
       <div class="drawer-section-label">计时器存储</div>
-      <div class="field-row preset-name-row">
-        <span class="field-label">名称</span>
-        <input type="text" class="input input-text" id="presetNameInput" maxlength="24" placeholder="例如：校赛决赛">
+      <div class="preset-create">
+        <input type="text" class="input input-text preset-name-input" id="presetNameInput" maxlength="24" placeholder="计时器名称，例如：校赛决赛">
+        <button class="preset-new-btn" id="savePresetBtn">＋ 新建</button>
       </div>
-      <div class="preset-save-row">
-        <button class="chip" id="savePresetBtn">保存当前计时器</button>
-        <span id="presetStatus"></span>
+      <div class="preset-create-meta">
+        <span class="preset-hint">把当前环节设置存为计时器（最多 3 个）。</span>
+        <span id="presetStatus" class="preset-status"></span>
       </div>
-      <div class="preset-hint">最多保存 3 个，保存内容包含环节顺序、名称和时长。</div>
       <div id="presetList" class="preset-list"></div>
     </div>
 

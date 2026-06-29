@@ -705,6 +705,121 @@
     box-shadow: 0 1px 2px oklch(0 0 0 / 0.05);
   }
 
+  /* ===== Timer storage (presets) ===== */
+  .preset-create {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    margin-bottom: 8px;
+  }
+  .preset-name-input {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+  }
+  .preset-new-btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    border: 1px solid var(--border-strong);
+    background: var(--ink);
+    color: var(--bg);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .preset-new-btn:hover { opacity: 0.85; }
+  .preset-create-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+  .preset-status {
+    font-size: 11px;
+    color: var(--accent);
+    font-family: "JetBrains Mono", monospace;
+    white-space: nowrap;
+  }
+  .preset-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .preset-group-label {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    color: var(--ink-3);
+    margin: 10px 0 2px;
+  }
+  .preset-item {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-2);
+  }
+  .preset-info { min-width: 0; }
+  .preset-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .preset-tag {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 9px;
+    font-weight: 500;
+    color: var(--ink-3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+  .preset-meta {
+    font-size: 11px;
+    color: var(--ink-3);
+    font-family: "JetBrains Mono", monospace;
+    margin-top: 3px;
+  }
+  .preset-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .preset-chip {
+    border: 1px solid var(--border) !important;
+    background: var(--surface) !important;
+    color: var(--ink-2) !important;
+    padding: 5px 12px !important;
+    font-size: 12px !important;
+    border-radius: 6px !important;
+    cursor: pointer;
+  }
+  .preset-chip:hover { color: var(--ink) !important; border-color: var(--border-strong) !important; }
+  .preset-chip-danger:hover { color: var(--warn) !important; border-color: var(--warn) !important; }
+  .preset-empty {
+    font-size: 12px;
+    color: var(--ink-3);
+    padding: 6px 2px;
+  }
+  .preset-hint {
+    font-size: 11px;
+    color: var(--ink-3);
+    line-height: 1.5;
+  }
+
   .stages-list {
     display: flex;
     flex-direction: column;

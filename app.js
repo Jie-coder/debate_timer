@@ -830,47 +830,54 @@
     const list = document.getElementById('presetList');
     if (!list) return;
     list.innerHTML = '';
-    // Built-in formats first (apply only, no edit/delete)
-    BUILT_IN_PRESETS.forEach(preset => {
+
+    const makeItem = (preset, builtin) => {
       const item = document.createElement('div');
-      item.className = 'preset-item';
+      item.className = 'preset-item' + (builtin ? ' preset-item-builtin' : '');
       const totalSeconds = preset.stages.reduce((sum, stg) => sum + (Number(stg.duration) || 0), 0);
-      item.innerHTML = '<div>' +
-        '<div class="preset-title">' + escapeHtml(preset.name) +
-          ' <span style="font-size:9px;opacity:.55;font-family:\'JetBrains Mono\',monospace;">内置</span></div>' +
-        '<div class="preset-meta">' + preset.stages.length + ' 个环节 · 共 ' + formatTime(totalSeconds) + '</div>' +
+      const tag = builtin ? ' <span class="preset-tag">内置</span>' : '';
+      let actions = '<button class="chip preset-chip" data-action="load">套用</button>';
+      if (!builtin) {
+        actions += '<button class="chip preset-chip" data-action="rename">改名</button>' +
+                   '<button class="chip preset-chip" data-action="update">更新</button>' +
+                   '<button class="chip preset-chip preset-chip-danger" data-action="delete">删除</button>';
+      }
+      item.innerHTML = '<div class="preset-info">' +
+        '<div class="preset-title">' + escapeHtml(preset.name) + tag + '</div>' +
+        '<div class="preset-meta">' + preset.stages.length + ' 环节 · ' + formatTime(totalSeconds) + '</div>' +
         '</div>' +
-        '<div class="preset-actions">' +
-          '<button class="chip" data-action="load">套用</button>' +
-        '</div>';
-      item.querySelector('[data-action="load"]').addEventListener('click', () => loadBuiltInPreset(preset.name));
-      list.appendChild(item);
-    });
+        '<div class="preset-actions">' + actions + '</div>';
+      const on = (act, fn) => { const b = item.querySelector('[data-action="' + act + '"]'); if (b) b.addEventListener('click', fn); };
+      if (builtin) {
+        on('load', () => loadBuiltInPreset(preset.name));
+      } else {
+        on('load', () => loadTimerPreset(preset.id));
+        on('rename', () => renameTimerPreset(preset.id));
+        on('update', () => updateTimerPreset(preset.id));
+        on('delete', () => deleteTimerPreset(preset.id));
+      }
+      return item;
+    };
+
+    const label = (text) => {
+      const el = document.createElement('div');
+      el.className = 'preset-group-label';
+      el.textContent = text;
+      list.appendChild(el);
+    };
+
+    label('内置赛制');
+    BUILT_IN_PRESETS.forEach(p => list.appendChild(makeItem(p, true)));
+
+    label('我的计时器 (' + timerPresets.length + '/3)');
     if (timerPresets.length === 0) {
       const empty = document.createElement('div');
-      empty.className = 'preset-hint';
-      empty.textContent = '以上为内置赛制。你还没有保存自定义计时器。';
+      empty.className = 'preset-empty';
+      empty.textContent = '还没有。设置好环节后，点上方「新建」保存为计时器。';
       list.appendChild(empty);
-      return;
+    } else {
+      timerPresets.forEach(p => list.appendChild(makeItem(p, false)));
     }
-    timerPresets.forEach(preset => {
-      const item = document.createElement('div');
-      item.className = 'preset-item';
-      const totalSeconds = preset.stages.reduce((sum, stg) => sum + (Number(stg.duration) || 0), 0);
-      item.innerHTML = '<div>' +
-        '<div class="preset-title">' + escapeHtml(preset.name) + '</div>' +
-        '<div class="preset-meta">' + preset.stages.length + ' 个环节 · 共 ' + formatTime(totalSeconds) + '</div>' +
-        '</div>' +
-        '<div class="preset-actions">' +
-          '<button class="chip" data-action="load">套用</button>' +
-          '<button class="chip" data-action="update">修改</button>' +
-          '<button class="chip" data-action="delete">删除</button>' +
-        '</div>';
-      item.querySelector('[data-action="load"]').addEventListener('click', () => loadTimerPreset(preset.id));
-      item.querySelector('[data-action="update"]').addEventListener('click', () => updateTimerPreset(preset.id));
-      item.querySelector('[data-action="delete"]').addEventListener('click', () => deleteTimerPreset(preset.id));
-      list.appendChild(item);
-    });
   }
 
   function saveTimerPresetFromInput() {
@@ -946,6 +953,17 @@
     saveTimerPresets();
     renderPresetList();
     setPresetStatus('已修改');
+  }
+
+  function renameTimerPreset(id) {
+    const preset = timerPresets.find(p => p.id === id);
+    if (!preset) return;
+    const name = (window.prompt('计时器名称', preset.name) || '').trim();
+    if (!name) return;
+    preset.name = name.slice(0, 24);
+    saveTimerPresets();
+    renderPresetList();
+    setPresetStatus('已改名');
   }
 
   function deleteTimerPreset(id) {

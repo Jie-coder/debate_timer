@@ -712,6 +712,121 @@
     box-shadow: 0 1px 2px oklch(0 0 0 / 0.05);
   }
 
+  /* ===== Timer storage (presets) ===== */
+  .preset-create {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    margin-bottom: 8px;
+  }
+  .preset-name-input {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+  }
+  .preset-new-btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    border: 1px solid var(--border-strong);
+    background: var(--ink);
+    color: var(--bg);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .preset-new-btn:hover { opacity: 0.85; }
+  .preset-create-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+  .preset-status {
+    font-size: 11px;
+    color: var(--accent);
+    font-family: "JetBrains Mono", monospace;
+    white-space: nowrap;
+  }
+  .preset-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .preset-group-label {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    color: var(--ink-3);
+    margin: 10px 0 2px;
+  }
+  .preset-item {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-2);
+  }
+  .preset-info { min-width: 0; }
+  .preset-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .preset-tag {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 9px;
+    font-weight: 500;
+    color: var(--ink-3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+  .preset-meta {
+    font-size: 11px;
+    color: var(--ink-3);
+    font-family: "JetBrains Mono", monospace;
+    margin-top: 3px;
+  }
+  .preset-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .preset-chip {
+    border: 1px solid var(--border) !important;
+    background: var(--surface) !important;
+    color: var(--ink-2) !important;
+    padding: 5px 12px !important;
+    font-size: 12px !important;
+    border-radius: 6px !important;
+    cursor: pointer;
+  }
+  .preset-chip:hover { color: var(--ink) !important; border-color: var(--border-strong) !important; }
+  .preset-chip-danger:hover { color: var(--warn) !important; border-color: var(--warn) !important; }
+  .preset-empty {
+    font-size: 12px;
+    color: var(--ink-3);
+    padding: 6px 2px;
+  }
+  .preset-hint {
+    font-size: 11px;
+    color: var(--ink-3);
+    line-height: 1.5;
+  }
+
   .stages-list {
     display: flex;
     flex-direction: column;
@@ -2988,47 +3103,54 @@ body[data-screen="cover"] #btnNext {
     const list = document.getElementById('presetList');
     if (!list) return;
     list.innerHTML = '';
-    // Built-in formats first (apply only, no edit/delete)
-    BUILT_IN_PRESETS.forEach(preset => {
+
+    const makeItem = (preset, builtin) => {
       const item = document.createElement('div');
-      item.className = 'preset-item';
+      item.className = 'preset-item' + (builtin ? ' preset-item-builtin' : '');
       const totalSeconds = preset.stages.reduce((sum, stg) => sum + (Number(stg.duration) || 0), 0);
-      item.innerHTML = '<div>' +
-        '<div class="preset-title">' + escapeHtml(preset.name) +
-          ' <span style="font-size:9px;opacity:.55;font-family:\'JetBrains Mono\',monospace;">内置</span></div>' +
-        '<div class="preset-meta">' + preset.stages.length + ' 个环节 · 共 ' + formatTime(totalSeconds) + '</div>' +
+      const tag = builtin ? ' <span class="preset-tag">内置</span>' : '';
+      let actions = '<button class="chip preset-chip" data-action="load">套用</button>';
+      if (!builtin) {
+        actions += '<button class="chip preset-chip" data-action="rename">改名</button>' +
+                   '<button class="chip preset-chip" data-action="update">更新</button>' +
+                   '<button class="chip preset-chip preset-chip-danger" data-action="delete">删除</button>';
+      }
+      item.innerHTML = '<div class="preset-info">' +
+        '<div class="preset-title">' + escapeHtml(preset.name) + tag + '</div>' +
+        '<div class="preset-meta">' + preset.stages.length + ' 环节 · ' + formatTime(totalSeconds) + '</div>' +
         '</div>' +
-        '<div class="preset-actions">' +
-          '<button class="chip" data-action="load">套用</button>' +
-        '</div>';
-      item.querySelector('[data-action="load"]').addEventListener('click', () => loadBuiltInPreset(preset.name));
-      list.appendChild(item);
-    });
+        '<div class="preset-actions">' + actions + '</div>';
+      const on = (act, fn) => { const b = item.querySelector('[data-action="' + act + '"]'); if (b) b.addEventListener('click', fn); };
+      if (builtin) {
+        on('load', () => loadBuiltInPreset(preset.name));
+      } else {
+        on('load', () => loadTimerPreset(preset.id));
+        on('rename', () => renameTimerPreset(preset.id));
+        on('update', () => updateTimerPreset(preset.id));
+        on('delete', () => deleteTimerPreset(preset.id));
+      }
+      return item;
+    };
+
+    const label = (text) => {
+      const el = document.createElement('div');
+      el.className = 'preset-group-label';
+      el.textContent = text;
+      list.appendChild(el);
+    };
+
+    label('内置赛制');
+    BUILT_IN_PRESETS.forEach(p => list.appendChild(makeItem(p, true)));
+
+    label('我的计时器 (' + timerPresets.length + '/3)');
     if (timerPresets.length === 0) {
       const empty = document.createElement('div');
-      empty.className = 'preset-hint';
-      empty.textContent = '以上为内置赛制。你还没有保存自定义计时器。';
+      empty.className = 'preset-empty';
+      empty.textContent = '还没有。设置好环节后，点上方「新建」保存为计时器。';
       list.appendChild(empty);
-      return;
+    } else {
+      timerPresets.forEach(p => list.appendChild(makeItem(p, false)));
     }
-    timerPresets.forEach(preset => {
-      const item = document.createElement('div');
-      item.className = 'preset-item';
-      const totalSeconds = preset.stages.reduce((sum, stg) => sum + (Number(stg.duration) || 0), 0);
-      item.innerHTML = '<div>' +
-        '<div class="preset-title">' + escapeHtml(preset.name) + '</div>' +
-        '<div class="preset-meta">' + preset.stages.length + ' 个环节 · 共 ' + formatTime(totalSeconds) + '</div>' +
-        '</div>' +
-        '<div class="preset-actions">' +
-          '<button class="chip" data-action="load">套用</button>' +
-          '<button class="chip" data-action="update">修改</button>' +
-          '<button class="chip" data-action="delete">删除</button>' +
-        '</div>';
-      item.querySelector('[data-action="load"]').addEventListener('click', () => loadTimerPreset(preset.id));
-      item.querySelector('[data-action="update"]').addEventListener('click', () => updateTimerPreset(preset.id));
-      item.querySelector('[data-action="delete"]').addEventListener('click', () => deleteTimerPreset(preset.id));
-      list.appendChild(item);
-    });
   }
 
   function saveTimerPresetFromInput() {
@@ -3104,6 +3226,17 @@ body[data-screen="cover"] #btnNext {
     saveTimerPresets();
     renderPresetList();
     setPresetStatus('已修改');
+  }
+
+  function renameTimerPreset(id) {
+    const preset = timerPresets.find(p => p.id === id);
+    if (!preset) return;
+    const name = (window.prompt('计时器名称', preset.name) || '').trim();
+    if (!name) return;
+    preset.name = name.slice(0, 24);
+    saveTimerPresets();
+    renderPresetList();
+    setPresetStatus('已改名');
   }
 
   function deleteTimerPreset(id) {
@@ -3392,15 +3525,14 @@ body[data-screen="cover"] #btnNext {
 
     <div class="drawer-section">
       <div class="drawer-section-label">计时器存储</div>
-      <div class="field-row preset-name-row">
-        <span class="field-label">名称</span>
-        <input type="text" class="input input-text" id="presetNameInput" maxlength="24" placeholder="例如：校赛决赛">
+      <div class="preset-create">
+        <input type="text" class="input input-text preset-name-input" id="presetNameInput" maxlength="24" placeholder="计时器名称，例如：校赛决赛">
+        <button class="preset-new-btn" id="savePresetBtn">＋ 新建</button>
       </div>
-      <div class="preset-save-row">
-        <button class="chip" id="savePresetBtn">保存当前计时器</button>
-        <span id="presetStatus"></span>
+      <div class="preset-create-meta">
+        <span class="preset-hint">把当前环节设置存为计时器（最多 3 个）。</span>
+        <span id="presetStatus" class="preset-status"></span>
       </div>
-      <div class="preset-hint">最多保存 3 个，保存内容包含环节顺序、名称和时长。</div>
       <div id="presetList" class="preset-list"></div>
     </div>
 
