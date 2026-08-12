@@ -19,14 +19,18 @@ function buildSingleHtml() {
   const css = read(cssPath);
   const js = read(jsPath);
 
+  // Replacements go through a function so `$&`, `$'` etc. inside the CSS/JS
+  // are never interpreted as replacement patterns.
   html = html.replace(
     /<link rel="stylesheet" href="style\.css">\s*/u,
-    `<style>\n${css}\n</style>\n`
+    () => `<style>\n${css}\n</style>\n`
   );
-  html = html.replace(
-    /\s*<script src="app\.js" defer><\/script>/u,
-    `\n<script>\n${js.replace(/<\/script>/giu, '<\\/script>')}\n</script>`
-  );
+  // `defer` is ignored on inline scripts, so the bundle must be emitted at the
+  // end of <body>. Inlining it into <head> makes it run before the markup
+  // exists and every getElementById() at init returns null.
+  html = html.replace(/\s*<script src="app\.js" defer><\/script>/u, '');
+  const inlineJs = `<script>\n${js.replace(/<\/script>/giu, '<\\/script>')}\n</script>\n`;
+  html = html.replace(/<\/body>/u, () => inlineJs + '</body>');
 
   fs.mkdirSync(distDir, { recursive: true });
   fs.writeFileSync(path.join(distDir, distSingleName), html, 'utf8');

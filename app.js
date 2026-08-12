@@ -39,6 +39,34 @@
     },
   ];
 
+  /* ---------------- Duel flow (双计时环节的结束行为) ----------------
+     'relay' 交锋：一方归零后自动接续对方，适合自由辩、对辩、攻辩。
+     'solo'  独立：一方归零后停下，对方剩余时间原地保留，适合质询、申论。
+     stg.duelFlow 只有用户手动切过才会写进环节对象；没写就按环节名推断，
+     所以改名之后默认值会跟着改，手动设过的则一直保留。            */
+  const DUEL_FLOWS = ['relay', 'solo'];
+  const SOLO_NAME_HINTS = ['质询', '申论', '陈词', '陈述', '立论', '小结', '结辩', '总结', '驳论', '盘问', '答辩'];
+  const RELAY_NAME_HINTS = ['自由辩', '对辩', '攻辩', '交锋', '混战', '缠斗'];
+
+  function inferDuelFlow(name) {
+    const n = String(name || '');
+    // 先判独立：'攻辩小结'、'质询小结' 这类名字两边关键词都命中，应当算独立
+    if (SOLO_NAME_HINTS.some(k => n.includes(k))) return 'solo';
+    if (RELAY_NAME_HINTS.some(k => n.includes(k))) return 'relay';
+    return 'relay';
+  }
+  function isDuelFlow(v) { return DUEL_FLOWS.indexOf(v) >= 0; }
+  function duelFlowOf(stg) {
+    if (!stg) return 'relay';
+    return isDuelFlow(stg.duelFlow) ? stg.duelFlow : inferDuelFlow(stg.name);
+  }
+  function duelFlowLabel(flow) { return flow === 'solo' ? '独立' : '交锋'; }
+  function duelFlowTitle(flow) {
+    return flow === 'solo'
+      ? '独立计时：一方归零后停下，对方剩余时间原地保留（质询、申论）'
+      : '交锋计时：一方归零后自动接续对方（自由辩、对辩）';
+  }
+
   // Per-stage runtime cache: stageId -> { remaining, duelPro, duelCon, duelActive }
   const runtimeCache = {};
   function getRuntime(id) {
@@ -75,6 +103,7 @@
     return state.stages.find(s => s.id === state.currentId) || state.stages[0];
   }
   function curMode() { return curStage().type; } // 'single' | 'duel'
+  function curDuelFlow() { return duelFlowOf(curStage()); }
   function curDuration() { return curStage().duration; }
   function curName() { return curStage().name; }
   function ensureCoverStage() {
@@ -86,11 +115,17 @@
     cover.type = 'cover';
     cover.duration = 0;
     cover.name = cover.name || base.name;
-    state.stages = state.stages.map(s => ({
-      ...s,
-      type: s.type === 'duel' ? 'duel' : (s.type === 'cover' ? 'cover' : 'single'),
-      duration: s.type === 'cover' ? 0 : Math.max(10, Number(s.duration) || 60),
-    }));
+    state.stages = state.stages.map(s => {
+      const type = s.type === 'duel' ? 'duel' : (s.type === 'cover' ? 'cover' : 'single');
+      const out = {
+        ...s,
+        type,
+        duration: type === 'cover' ? 0 : Math.max(10, Number(s.duration) || 60),
+      };
+      // 只保留合法的显式设置，其余交给 duelFlowOf() 按环节名推断
+      if (!isDuelFlow(out.duelFlow)) delete out.duelFlow;
+      return out;
+    });
     state.stages.unshift(cover);
   }
 
@@ -362,6 +397,7 @@
   
   
   function renderDuel() {
+    const flow = curDuelFlow();
     stage.innerHTML = `
       <div class="duel" id="duel">
         <div class="duel-panel active" data-side="pro" id="panelPro">
@@ -390,7 +426,7 @@
           </button>
           <div class="duel-progress"><div class="duel-progress-fill" id="conProgress" style="width:100%"></div></div>
         </div>
-        <div class="duel-divider">VS</div>
+        <div class="duel-divider" data-flow="${flow}" title="${duelFlowTitle(flow)}">${flow === 'solo' ? '独立' : 'VS'}</div>
       </div>`;
     document.getElementById('panelPro').addEventListener('click', (e) => {
       if (e.target.closest('.duel-reset-btn') || e.target.closest('.editable-time')) return;
@@ -412,6 +448,7 @@
       const rt = getRuntime(curStage().id);
       if (rt) rt.duelPro = state.duel.pro;
       updateTimes();
+      updateDuelActive();
     });
     document.getElementById('btnResetCon').addEventListener('click', (e) => {
       e.stopPropagation();
@@ -419,25 +456,27 @@
       const rt = getRuntime(curStage().id);
       if (rt) rt.duelCon = state.duel.con;
       updateTimes();
+      updateDuelActive();
     });
     wireEditableTime();
+    // 恢复缓存里的当前方 / 已结束状态，而不是永远显示正方在跑
+    updateDuelActive();
   }
 
   function updateDuelActive() {
     const pro = document.getElementById('panelPro');
     const con = document.getElementById('panelCon');
     if (!pro || !con) return;
-    if (state.duel.active === 'pro') {
-      pro.classList.add('active'); pro.classList.remove('inactive');
-      con.classList.add('inactive'); con.classList.remove('active');
-      pro.querySelector('.duel-status').textContent = '计时中';
-      con.querySelector('.duel-status').textContent = state.running ? '暂停中' : '待命';
-    } else {
-      con.classList.add('active'); con.classList.remove('inactive');
-      pro.classList.add('inactive'); pro.classList.remove('active');
-      con.querySelector('.duel-status').textContent = '计时中';
-      pro.querySelector('.duel-status').textContent = state.running ? '暂停中' : '待命';
-    }
+    const activeSide = state.duel.active === 'con' ? 'con' : 'pro';
+    const otherSide = activeSide === 'pro' ? 'con' : 'pro';
+    const activeEl = activeSide === 'pro' ? pro : con;
+    const otherEl = activeSide === 'pro' ? con : pro;
+    activeEl.classList.add('active'); activeEl.classList.remove('inactive');
+    otherEl.classList.add('inactive'); otherEl.classList.remove('active');
+    activeEl.querySelector('.duel-status').textContent =
+      state.duel[activeSide] <= 0 ? '已结束' : '计时中';
+    otherEl.querySelector('.duel-status').textContent =
+      state.duel[otherSide] <= 0 ? '已结束' : (state.running ? '暂停中' : '待命');
   }
 
   
@@ -535,16 +574,17 @@
 
   function handleTimeUp() {
     if (curMode() === 'duel') {
-      // Auto-switch to the other side if it still has time
       const other = state.duel.active === 'pro' ? 'con' : 'pro';
-      if (state.duel[other] > 0) {
+      if (curDuelFlow() === 'relay' && state.duel[other] > 0) {
+        // 交锋：自动接续还有时间的一方，整体继续跑
         state.duel.active = other;
-        // keep running
         updateDuelActive();
         updateTimes();
       } else {
+        // 独立：停下，对方剩余时间原地保留，要用时点它或按 1/2 再开始
         state.running = false;
         updateStartButton();
+        updateDuelActive();
       }
     } else {
       state.running = false;
@@ -655,6 +695,7 @@
       b.className = 'mode-tab' + (s.id === state.currentId ? ' active' : '');
       b.dataset.id = s.id;
       b.textContent = s.name;
+      if (s.type === 'duel') b.title = '双计时 · ' + duelFlowTitle(duelFlowOf(s));
       tabs.appendChild(b);
     });
   }
@@ -694,6 +735,18 @@
   }
 
   /* ---------------- Stages drawer list ---------------- */
+  function syncFlowPill(pill, stg) {
+    if (!pill) return;
+    const isDuel = stg.type === 'duel';
+    const flow = duelFlowOf(stg);
+    pill.dataset.flow = flow;
+    pill.textContent = duelFlowLabel(flow);
+    pill.disabled = !isDuel;
+    pill.title = isDuel ? duelFlowTitle(flow) : '';
+    // 单计时 / 首页保留占位，避免各行宽度跳动
+    pill.style.visibility = isDuel ? 'visible' : 'hidden';
+  }
+
   function renderStagesList() {
     const list = document.getElementById('stagesList');
     list.innerHTML = '';
@@ -707,14 +760,27 @@
         <span class="stage-grip">⋮⋮</span>
         <input class="stage-name-input" value="${stg.name.replace(/"/g, '&quot;')}" maxlength="10">
         <button class="stage-type-pill" data-type="${stg.type}" title="${isCover ? '\u9996\u9875\u4e0d\u53c2\u4e0e\u8ba1\u65f6' : '\u5207\u6362\u7c7b\u578b'}" ${isCover ? 'disabled' : ''}>${isCover ? '\u9996\u9875' : (stg.type === 'duel' ? '\u53cc' : '\u5355')}</button>
+        <button class="stage-flow-pill"></button>
         <input type="number" class="stage-dur-input" value="${stg.duration}" min="0" step="10" ${isCover ? 'disabled' : ''}>
         <span style="font-size:10px;color:var(--ink-3);font-family:'JetBrains Mono',monospace;">s</span>
         <button class="stage-del" title="\u5220\u9664" ${isCover ? 'disabled' : ''}>\u00d7</button>
       `;
+      const flowPill = row.querySelector('.stage-flow-pill');
+      syncFlowPill(flowPill, stg);
       // name
       row.querySelector('.stage-name-input').addEventListener('input', (e) => {
         stg.name = e.target.value.slice(0, 10) || '环节';
+        // 没手动设过交锋/独立的环节，默认值跟着名字走
+        syncFlowPill(flowPill, stg);
         renderModeTabs(); updateFlowDots();
+        if (stg.id === state.currentId) renderStage();
+        saveState();
+      });
+      // 交锋 / 独立 toggle
+      flowPill.addEventListener('click', () => {
+        if (stg.type !== 'duel') return;
+        stg.duelFlow = duelFlowOf(stg) === 'solo' ? 'relay' : 'solo';
+        syncFlowPill(flowPill, stg);
         if (stg.id === state.currentId) renderStage();
         saveState();
       });
@@ -787,7 +853,11 @@
   }
 
   function cloneStages(stages) {
-    return stages.map(s => ({ id: s.id, name: s.name, type: s.type, duration: s.duration }));
+    return stages.map(s => {
+      const out = { id: s.id, name: s.name, type: s.type, duration: s.duration };
+      if (isDuelFlow(s.duelFlow)) out.duelFlow = s.duelFlow;
+      return out;
+    });
   }
 
   function loadTimerPresets() {
@@ -903,10 +973,14 @@
   function applyStageSet(stages, label) {
     state.running = false;
     const base = Date.now();
-    state.stages = stages.map((st, i) => ({
-      id: 'b' + base + '_' + i,
-      name: st.name, type: st.type, duration: st.duration,
-    }));
+    state.stages = stages.map((st, i) => {
+      const out = {
+        id: 'b' + base + '_' + i,
+        name: st.name, type: st.type, duration: st.duration,
+      };
+      if (isDuelFlow(st.duelFlow)) out.duelFlow = st.duelFlow;
+      return out;
+    });
     ensureCoverStage();
     state.currentId = state.stages[0].id;
     clearRuntimeCache();
@@ -1105,13 +1179,16 @@
   /* ---------------- Init ---------------- */
   loadState();
   timerPresets = loadTimerPresets();
+  // ensureCoverStage() 会用 map() 换掉整个 stages 数组，必须跑在 renderStagesList()
+  // 之前，否则抽屉里每一行闭包住的都是已经被丢弃的环节对象，
+  // 页面刚打开时的第一次改名/改时长/换类型会全部丢失。
+  ensureCoverStage();
+  if (!state.stages.find(s => s.id === state.currentId)) state.currentId = state.stages[0].id;
   applyTheme();
   applyInputs();
   renderStagesList();
   renderPresetList();
   renderModeTabs();
-  ensureCoverStage();
-  if (!state.stages.find(s => s.id === state.currentId)) state.currentId = state.stages[0].id;
   if (curMode() === 'cover') {
     state.remaining = 0;
   } else if (curMode() === 'duel') {

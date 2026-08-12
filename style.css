@@ -873,6 +873,23 @@
     color: var(--accent);
     border-color: var(--accent);
   }
+  .stage-flow-pill {
+    font-family: inherit;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    padding: 3px 6px;
+    border-radius: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--ink-2);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .stage-flow-pill[data-flow="solo"] {
+    border-style: dashed;
+    color: var(--ink);
+  }
+  .stage-flow-pill:disabled { cursor: default; }
   .stage-dur-input {
     width: 56px;
     border: 1px solid var(--border);
@@ -1571,12 +1588,18 @@ footer {
 .stage-name-input,
 .stage-dur-input,
 .stage-type-pill,
+.stage-flow-pill,
 .stage-del,
 .switch {
   border-radius: 0 !important;
   border-color: var(--vf-line) !important;
   background: transparent !important;
   color: var(--vf-ink) !important;
+}
+
+/* 双计时环节的「独立」用虚线框区分于「交锋」 */
+.stage-flow-pill[data-flow="solo"] {
+  border-style: dashed !important;
 }
 
 .chip[data-theme="warm"] {
