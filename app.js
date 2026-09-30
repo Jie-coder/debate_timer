@@ -37,6 +37,42 @@
         { name: '结辩', type: 'single', duration: 240 },
       ],
     },
+    {
+      name: '世界杯',
+      stages: [
+        { name: '正方一辩发言', type: 'single', duration: 180 },
+        { name: '反方二辩质询', type: 'single', duration: 90 },
+        { name: '反方一辩发言', type: 'single', duration: 180 },
+        { name: '正方二辩质询', type: 'single', duration: 90 },
+        { name: '反方二辩质询小结', type: 'single', duration: 120 },
+        { name: '正方二辩质询小结', type: 'single', duration: 120 },
+        { name: '四辩对辩', type: 'duel', duration: 90 },
+        { name: '正方三辩盘问', type: 'single', duration: 90 },
+        { name: '反方三辩盘问', type: 'single', duration: 90 },
+        { name: '正方三辩盘问小结', type: 'single', duration: 120 },
+        { name: '反方三辩盘问小结', type: 'single', duration: 120 },
+        { name: '自由辩论', type: 'duel', duration: 180 },
+        { name: '反方四辩总结陈词', type: 'single', duration: 210 },
+        { name: '正方四辩总结陈词', type: 'single', duration: 210 },
+      ],
+    },
+    {
+      name: '马中辩',
+      stages: [
+        { name: '正方一辩立论', type: 'single', duration: 180 },
+        { name: '反方一辩立论', type: 'single', duration: 180 },
+        { name: '反方二辩质询', type: 'single', duration: 120 },
+        { name: '正方二辩质询', type: 'single', duration: 120 },
+        { name: '反方二辩申论', type: 'single', duration: 180 },
+        { name: '正方二辩申论', type: 'single', duration: 180 },
+        { name: '一辩对辩', type: 'duel', duration: 120 },
+        { name: '正方三辩申论', type: 'single', duration: 120 },
+        { name: '反方三辩申论', type: 'single', duration: 120 },
+        { name: '自由辩论', type: 'duel', duration: 180 },
+        { name: '反方三辩结辩', type: 'single', duration: 180 },
+        { name: '正方三辩结辩', type: 'single', duration: 180 },
+      ],
+    },
   ];
 
   /* ---------------- Duel flow (双计时环节的结束行为) ----------------
@@ -933,7 +969,8 @@
     const makeItem = (preset, builtin) => {
       const item = document.createElement('div');
       item.className = 'preset-item' + (builtin ? ' preset-item-builtin' : '');
-      const totalSeconds = preset.stages.reduce((sum, stg) => sum + (Number(stg.duration) || 0), 0);
+      // 双计时环节正反方各有一份时长，总时长要算两次
+      const totalSeconds = preset.stages.reduce((sum, stg) => sum + (Number(stg.duration) || 0) * (stg.type === 'duel' ? 2 : 1), 0);
       const tag = builtin ? ' <span class="preset-tag">内置</span>' : '';
       let actions = '<button class="chip preset-chip" data-action="load">套用</button>';
       if (!builtin) {
