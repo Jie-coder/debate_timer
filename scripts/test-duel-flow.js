@@ -231,7 +231,7 @@ check('flow pill visible on duel stages', rowNamed('对辩').querySelector('.sta
   dur.value = '10';
   dur.dispatch('change', { target: dur });
   check('navigated to 自由辩论', goToStage('自由辩论'), true);
-  check('relay divider reads VS', duelSnapshot().divider, 'VS');
+  check('relay divider reads 交锋', duelSnapshot().divider, '交锋');
   key(' ');
   advance(14);
   const s = duelSnapshot();
@@ -241,6 +241,42 @@ check('flow pill visible on duel stages', rowNamed('对辩').querySelector('.sta
   const s2 = duelSnapshot();
   check('relay: both exhausted -> stop', [z(s2.pro), z(s2.con), s2.startLabel], ['00:00', '00:00', '开始']);
   check('relay: both sides show 已结束', [s2.proStatus, s2.conStatus], ['已结束', '已结束']);
+}
+
+/* ---- 6. time up means stopped: no overtime, no restart past zero ---- */
+{
+  // 自由辩论 is fully exhausted from section 5
+  check('exhausted duel: exact 00:00, never negative', [duelSnapshot().pro, duelSnapshot().con], ['00:00', '00:00']);
+  key(' ');
+  check('exhausted duel: Space does not restart', [advance(3), duelSnapshot().pro, duelSnapshot().con], [0, '00:00', '00:00']);
+  key('1');
+  advance(3);
+  check('exhausted duel: key 1 does not run 正方 negative', duelSnapshot().pro, '00:00');
+
+  // back to 对辩 (solo): 正方 is at zero, 反方 has 6s left
+  check('navigated back to 对辩', goToStage('对辩'), true);
+  key('1');
+  advance(3);
+  check('solo: selecting the exhausted side does not count down', [duelSnapshot().pro, duelSnapshot().con], ['00:00', '00:06']);
+  key('2');
+  advance(20);
+  check('solo: 反方 stops exactly at 00:00', duelSnapshot().con, '00:00');
+
+  // single stage: run past the end, then try to resume
+  check('navigated to 反方质询', goToStage('反方质询'), true);
+  const dur = rowNamed('反方质询').querySelector('.stage-dur-input');
+  dur.value = '10';
+  dur.dispatch('change', { target: dur });
+  key('r');
+  key(' ');
+  const ran = advance(20);
+  check('single: loop stopped at zero', ran <= 11, true);
+  check('single: shows exactly 00:00', el('timeDisplay').textContent, '00:00');
+  check('single: start button reads 已结束', el('startLabel').textContent, '已结束');
+  key(' ');
+  check('single: Space after time up does not restart', [advance(3), el('timeDisplay').textContent], [0, '00:00']);
+  key('r');
+  check('single: reset restores full time', el('timeDisplay').textContent, '00:10');
 }
 
 console.log(fails === 0 ? '\nALL PASS' : '\n' + fails + ' FAILED');

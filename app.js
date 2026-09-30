@@ -83,15 +83,15 @@
   const state = {
     stages: DEFAULT_STAGES.map(s => ({...s})),
     currentId: 'cover',
-    theme: 'warm',
+    theme: 'arena',
     fontScale: 1,
     sound: true,
     tick: true,
     autoFlow: false,
-    proName: '\u5a01\u5357\u65e5\u65b0\u56fd\u6c11\u578b\u4e2d\u5b66',
-    conName: '\u97e9\u6c5f\u4e2d\u5b66',
+    proName: '',
+    conName: '',
     topic: '',
-    matchStage: '2026 \u534e\u4e2d\u676f \u521d\u8d5b',
+    matchStage: '',
     // runtime
     running: false,
     remaining: 180,
@@ -237,7 +237,7 @@
         '<div class="cover-head">' +
           '<div class="cover-kicker">' +
             '<label class="cover-visually-hidden" for="coverMatchStage">\u6bd4\u8d5b\u8d5b\u6bb5</label>' +
-            '<input id="coverMatchStage" class="cover-input cover-match-input" maxlength="40" value="' + escapeHtml(state.matchStage || '') + '" placeholder="2026 \u534e\u4e2d\u676f \u521d\u8d5b">' +
+            '<input id="coverMatchStage" class="cover-input cover-match-input" maxlength="40" value="' + escapeHtml(state.matchStage || '') + '" placeholder="\u6bd4\u8d5b\u540d\u79f0">' +
           '</div>' +
           '<textarea id="coverTopic" class="cover-input cover-topic-input" rows="2" maxlength="80" placeholder="\u8fa9\u9898">' + escapeHtml(state.topic || '') + '</textarea>' +
           '<div class="cover-title-rule"></div>' +
@@ -426,8 +426,14 @@
           </button>
           <div class="duel-progress"><div class="duel-progress-fill" id="conProgress" style="width:100%"></div></div>
         </div>
-        <div class="duel-divider" data-flow="${flow}" title="${duelFlowTitle(flow)}">${flow === 'solo' ? '独立' : 'VS'}</div>
+        <button class="duel-divider" id="duelFlowToggle" data-flow="${flow}" title="${duelFlowTitle(flow)}（点击切换）">${duelFlowLabel(flow)}</button>
       </div>`;
+    // 交锋 / 独立：在计时页直接点中间的圆钮切换，不用进设置
+    document.getElementById('duelFlowToggle').addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.currentTarget.blur(); // 避免之后按空格/回车又触发一次切换
+      toggleDuelFlow(curStage());
+    });
     document.getElementById('panelPro').addEventListener('click', (e) => {
       if (e.target.closest('.duel-reset-btn') || e.target.closest('.editable-time')) return;
       if (curMode() !== 'duel') return;
@@ -540,15 +546,21 @@
     let prevWhole;
     if (curMode() === 'duel') {
       const k = state.duel.active;
-      prevWhole = Math.ceil(state.duel[k]);
-      state.duel[k] -= delta;
-      checkBeeps(prevWhole, state.duel[k], curDuration());
+      if (state.duel[k] <= 0) {
+        // 运行中切到了已归零的一方：不倒扣，按 duelFlow 接续或停下
+        handleTimeUp();
+      } else {
+        prevWhole = Math.ceil(state.duel[k]);
+        state.duel[k] = Math.max(0, state.duel[k] - delta);
+        checkBeeps(prevWhole, state.duel[k], curDuration());
+      }
     } else {
       prevWhole = Math.ceil(state.remaining);
-      state.remaining -= delta;
+      state.remaining = Math.max(0, state.remaining - delta);
       checkBeeps(prevWhole, state.remaining, curDuration());
     }
     updateTimes();
+    if (!state.running) { rafId = null; return; }
     rafId = requestAnimationFrame(loop);
   }
 
@@ -604,9 +616,15 @@
   }
 
   /* ---------------- Controls ---------------- */
+  function activeRemaining() {
+    return curMode() === 'duel' ? state.duel[state.duel.active] : state.remaining;
+  }
+
   function toggleRun() {
     if (curMode() === 'cover') return;
     ensureAudio();
+    // 时间到后不再继续计时：已归零的计时器不能再开始，只能重置
+    if (!state.running && activeRemaining() <= 0) { updateStartButton(); return; }
     state.running = !state.running;
     state.lastTick = 0;
     if (state.running && !rafId) rafId = requestAnimationFrame(loop);
@@ -734,6 +752,23 @@
     if (ft) ft.textContent = '流程：' + state.stages.map(s => s.name).join(' → ');
   }
 
+  // pill: 从设置抽屉点的就只同步那一个 pill；从计时页点的则重绘抽屉列表
+  function toggleDuelFlow(stg, pill) {
+    if (!stg || stg.type !== 'duel') return;
+    stg.duelFlow = duelFlowOf(stg) === 'solo' ? 'relay' : 'solo';
+    const flow = duelFlowOf(stg);
+    const btn = stg.id === state.currentId && document.getElementById('duelFlowToggle');
+    if (btn) {
+      btn.dataset.flow = flow;
+      btn.textContent = duelFlowLabel(flow);
+      btn.title = duelFlowTitle(flow) + '（点击切换）';
+    }
+    if (pill) syncFlowPill(pill, stg);
+    else renderStagesList();
+    renderModeTabs();
+    saveState();
+  }
+
   /* ---------------- Stages drawer list ---------------- */
   function syncFlowPill(pill, stg) {
     if (!pill) return;
@@ -777,13 +812,7 @@
         saveState();
       });
       // 交锋 / 独立 toggle
-      flowPill.addEventListener('click', () => {
-        if (stg.type !== 'duel') return;
-        stg.duelFlow = duelFlowOf(stg) === 'solo' ? 'relay' : 'solo';
-        syncFlowPill(flowPill, stg);
-        if (stg.id === state.currentId) renderStage();
-        saveState();
-      });
+      flowPill.addEventListener('click', () => toggleDuelFlow(stg, flowPill));
       // type toggle
       row.querySelector('.stage-type-pill').addEventListener('click', (e) => {
         if (stg.type === 'cover') return;
@@ -1054,7 +1083,10 @@
   function closeDrawer() { drawer.classList.remove('open'); overlay.classList.remove('show'); }
 
   /* ---------------- Theme + font ---------------- */
+  const THEMES = ['arena', 'academy', 'soft', 'broadcast', 'terminal'];
   function applyTheme() {
+    // 旧版的 warm / dark / paper 已下线，存档里的旧值统一落到默认主题
+    if (THEMES.indexOf(state.theme) < 0) state.theme = THEMES[0];
     document.body.dataset.theme = state.theme;
     document.documentElement.style.setProperty('--font-scale', state.fontScale);
     document.querySelectorAll('#themeGroup .chip').forEach(c => {
