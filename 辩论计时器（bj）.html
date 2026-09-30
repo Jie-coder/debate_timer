@@ -3216,6 +3216,10 @@ html body[data-theme="terminal"] .brand-mark::after { top: 26px !important; whit
 #themeGroup { flex-wrap: wrap !important; gap: 8px !important; }
 #themeGroup .chip { white-space: nowrap !important; padding: 6px 12px !important; }
 
+/* 首页卡片：大屏时撑满可用高度；窄屏内容放不下时卡片随内容变高，首页可滚动，不再裁掉学校名 */
+html body[data-theme] .cover-page { height: auto !important; min-height: 100% !important; }
+html body .stage-cover { overflow-y: auto !important; }
+
 </style>
 </head>
 <body data-theme="arena">
