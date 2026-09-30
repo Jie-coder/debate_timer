@@ -3212,3 +3212,20 @@ html body[data-theme="terminal"] .brand-mark::after { top: 26px !important; whit
 /* 首页卡片：大屏时撑满可用高度；窄屏内容放不下时卡片随内容变高，首页可滚动，不再裁掉学校名 */
 html body[data-theme] .cover-page { height: auto !important; min-height: 100% !important; }
 html body .stage-cover { overflow-y: auto !important; }
+
+/* 双计时左右并排时只有一行：基础样式里的 1fr 1fr 是旧的上下布局，宽屏上会多出一条空行，
+   让面板撑不满（学院典雅的上下框线会露出来） */
+@media (min-width: 761px) {
+  .duel { grid-template-rows: minmax(0, 1fr) !important; }
+}
+
+/* 电视转播：比赛名称没填时不显示黄色横幅，只留淡色提示 */
+html body[data-theme="broadcast"] .cover-match-input:placeholder-shown {
+  background: transparent !important;
+}
+html body[data-theme="broadcast"] .cover-match-input::placeholder {
+  color: rgba(255, 255, 255, 0.35) !important;
+}
+
+/* 复古终端：logo 加宽后，辩题跟着对齐到左边 */
+html body[data-theme="terminal"] .brand-topic { margin-left: -226px !important; }

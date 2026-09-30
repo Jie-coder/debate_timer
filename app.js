@@ -541,8 +541,9 @@
         conEl.textContent = formatTime(state.duel.con);
         conEl.className = 'duel-time editable-time' + warnClass(state.duel.con, total);
       }
-      if (proProg) proProg.style.width = Math.max(0, state.duel.pro / total * 100) + '%';
-      if (conProg) conProg.style.width = Math.max(0, state.duel.con / total * 100) + '%';
+      // 改过某一方的时间会改环节总时长，另一方可能超过 100%，要夹住
+      if (proProg) proProg.style.width = Math.min(100, Math.max(0, state.duel.pro / total * 100)) + '%';
+      if (conProg) conProg.style.width = Math.min(100, Math.max(0, state.duel.con / total * 100)) + '%';
       const proName = document.getElementById('proNameEl');
       const conName = document.getElementById('conNameEl');
       if (proName) proName.textContent = '\u6b63\u65b9';
