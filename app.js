@@ -198,6 +198,99 @@
     } catch (e) {}
   }
 
+  /* ---------------- Custom background ---------------- */
+  // Keep image data separate so ordinary timer saves do not rewrite it.
+  const BACKGROUND_KEY = 'debate-timer-v2-background';
+  const BACKGROUND_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+  let backgroundRequest = 0;
+
+  function setBackgroundStatus(message) {
+    document.getElementById('backgroundStatus').textContent = message;
+  }
+
+  function applyBackground(dataUrl) {
+    document.body.classList.toggle('has-custom-background', !!dataUrl);
+    if (dataUrl) document.body.style.setProperty('--custom-background', 'url("' + dataUrl + '")');
+    else document.body.style.removeProperty('--custom-background');
+    const preview = document.getElementById('backgroundPreview');
+    preview.hidden = !dataUrl;
+    if (dataUrl) preview.src = dataUrl;
+    else preview.removeAttribute('src');
+    document.getElementById('resetBackground').disabled = !dataUrl;
+  }
+
+  function loadBackground() {
+    try {
+      const saved = localStorage.getItem(BACKGROUND_KEY);
+      if (saved && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(saved)) {
+        applyBackground(saved);
+      }
+    } catch (e) {
+      setBackgroundStatus('浏览器无法读取本地背景，仍可选择图片临时使用。');
+    }
+  }
+
+  async function chooseBackground(event) {
+    const file = event.target.files[0];
+    event.target.value = ''; // Allow choosing the same file again, including after an error.
+    if (!file) return;
+    const request = ++backgroundRequest;
+    if (!BACKGROUND_TYPES.includes(file.type)) {
+      setBackgroundStatus('请选择 JPG、PNG 或 WebP 图片。');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setBackgroundStatus('图片超过 10 MB，请选择较小的图片。');
+      return;
+    }
+    setBackgroundStatus('正在处理图片…');
+    try {
+      const source = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('read'));
+        reader.onabort = () => reject(new Error('abort'));
+        reader.readAsDataURL(file);
+      });
+      const image = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('decode'));
+        img.src = source;
+      });
+      if (request !== backgroundRequest) return;
+      // Bound storage use and resize large photographs before persisting them.
+      const scale = Math.min(1, 1920 / Math.max(image.naturalWidth, image.naturalHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/webp', 0.85);
+      if (!/^data:image\/(webp|png);base64,/.test(dataUrl)) throw new Error('encode');
+      applyBackground(dataUrl);
+      try {
+        localStorage.setItem(BACKGROUND_KEY, dataUrl);
+        setBackgroundStatus('背景已保存，刷新后仍会保留。');
+      } catch (e) {
+        setBackgroundStatus('背景已应用，但本地存储不可用或空间不足；刷新后无法保留此次更改。');
+      }
+    } catch (e) {
+      if (request === backgroundRequest) setBackgroundStatus('无法读取这张图片，请选择有效的 JPG、PNG 或 WebP 图片。');
+    }
+  }
+
+  function resetBackground() {
+    ++backgroundRequest; // A pending image read must not undo the reset.
+    try {
+      localStorage.removeItem(BACKGROUND_KEY);
+      applyBackground('');
+      setBackgroundStatus('已恢复当前主题的默认背景。');
+    } catch (e) {
+      setBackgroundStatus('无法清除本地背景，请允许浏览器使用本地存储后重试。');
+    }
+  }
+
   /* ---------------- Audio (WebAudio) ---------------- */
   let audioCtx;
   function ensureAudio() {
@@ -1170,6 +1263,12 @@
     document.getElementById('drawerClose').addEventListener('click', closeDrawer);
     overlay.addEventListener('click', closeDrawer);
 
+    document.getElementById('chooseBackground').addEventListener('click', () => {
+      document.getElementById('backgroundInput').click();
+    });
+    document.getElementById('backgroundInput').addEventListener('change', chooseBackground);
+    document.getElementById('resetBackground').addEventListener('click', resetBackground);
+
     document.getElementById('btnSound').addEventListener('click', () => {
       state.sound = !state.sound;
       applyInputs(); saveState();
@@ -1219,6 +1318,11 @@
     });
 
     document.addEventListener('keydown', (e) => {
+      // Let settings controls keep native Tab / Space keyboard behavior.
+      if (drawer.classList.contains('open')) {
+        if (e.key === 'Escape') closeDrawer();
+        return;
+      }
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       if (e.code === 'Space') { e.preventDefault(); toggleRun(); }
       else if (e.key.toLowerCase() === 'r') resetTimer();
@@ -1255,6 +1359,7 @@
   if (!state.stages.find(s => s.id === state.currentId)) state.currentId = state.stages[0].id;
   applyTheme();
   applyInputs();
+  loadBackground();
   renderStagesList();
   renderPresetList();
   renderModeTabs();

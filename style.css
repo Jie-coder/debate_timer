@@ -3229,3 +3229,77 @@ html body[data-theme="broadcast"] .cover-match-input::placeholder {
 
 /* 复古终端：logo 加宽后，辩题跟着对齐到左边 */
 html body[data-theme="terminal"] .brand-topic { margin-left: -226px !important; }
+
+/* 双计时随可用高度收缩：矮视口（如 1080p 屏 + 125% 缩放 = 1536×864、1280×720）下
+   不再靠 min-height 硬撑而压住底栏；数字、内边距、行距按面板高度（cqh）只缩不放。
+   ≤760px 的上下堆叠布局不受影响。 */
+@media (min-width: 761px) {
+  html body[data-theme] .stage-duel .duel {
+    min-height: 0 !important;
+    container-type: size;
+  }
+  html body[data-theme] .stage-duel .duel-panel {
+    /* --duel-fixed：数字以外各行（方名、重置、进度条）大约占掉的高度 */
+    --duel-time-size: clamp(126px, 11.4vw, 236px);
+    --duel-fixed: 100px;
+    /* 末行用 auto：各主题进度条高度不同（2–12px），固定 2px 会顶到重置按钮 */
+    grid-template-rows: minmax(48px, auto) minmax(0, 1fr) minmax(30px, auto) auto !important;
+    padding-top: min(clamp(22px, 3vw, 54px), 9cqh) !important;
+    padding-bottom: min(clamp(18px, 2.6vw, 42px), 8cqh) !important;
+    row-gap: min(clamp(8px, 1.8vh, 22px), 3cqh) !important;
+  }
+  html body[data-theme="broadcast"] .stage-duel .duel-panel {
+    --duel-time-size: clamp(150px, 15vw, 280px);
+    --duel-fixed: 110px;
+  }
+  html body[data-theme] .stage-duel .duel-time {
+    font-size: min(var(--duel-time-size), max(40px, calc(78cqh - var(--duel-fixed)))) !important;
+  }
+}
+@media (min-width: 761px) and (max-width: 1180px) {
+  html body[data-theme] .stage-duel .duel-panel {
+    --duel-time-size: clamp(108px, 11.2vw, 132px);
+    --duel-fixed: 140px;
+    grid-template-rows: minmax(76px, auto) minmax(0, 1fr) minmax(30px, auto) auto !important;
+    padding-top: min(26px, 9cqh) !important;
+    padding-bottom: min(22px, 8cqh) !important;
+    row-gap: min(10px, 3cqh) !important;
+  }
+  html body[data-theme="broadcast"] .stage-duel .duel-panel {
+    --duel-time-size: clamp(150px, 15vw, 280px);
+    --duel-fixed: 150px;
+  }
+}
+
+/* Custom backgrounds override each theme's page fill while preserving its colors. */
+html body[data-theme].has-custom-background {
+  background: var(--custom-background) center / cover no-repeat fixed var(--vf-paper) !important;
+}
+html body[data-theme].has-custom-background .app {
+  background: color-mix(in srgb, var(--vf-paper) 65%, transparent) !important;
+}
+html body[data-theme].has-custom-background .cover-page {
+  background: transparent !important;
+}
+.background-settings {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+.background-settings .chip-group { flex-wrap: wrap; }
+.background-settings .chip:disabled { opacity: 0.45; cursor: default; }
+.background-preview {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.background-preview[hidden] { display: none; }
+.background-hint {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.background-hint:empty { display: none; }

@@ -106,6 +106,17 @@
           <button class="chip" data-theme="terminal">复古终端</button>
         </div>
       </div>
+      <div class="background-settings">
+        <span class="field-label">背景图片</span>
+        <input type="file" id="backgroundInput" accept="image/jpeg,image/png,image/webp" hidden>
+        <div class="chip-group">
+          <button class="chip" id="chooseBackground" type="button">选择图片</button>
+          <button class="chip" id="resetBackground" type="button" disabled>恢复默认背景</button>
+        </div>
+        <img id="backgroundPreview" class="background-preview" alt="当前背景预览" hidden>
+        <p class="background-hint">支持 JPG、PNG、WebP（不超过 10 MB）。图片居中铺满，适用于所有环节，仅保存在本机浏览器。</p>
+        <p id="backgroundStatus" class="background-hint" role="status" aria-live="polite"></p>
+      </div>
       <div class="field-row vf-font-row" style="display:none">
         <span class="field-label">字体大小</span>
         <div class="chip-group" id="fontGroup">
