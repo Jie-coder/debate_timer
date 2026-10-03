@@ -121,6 +121,7 @@
     theme: 'arena',
     fontScale: 1,
     sound: true,
+    volume: 1, // 0–1，设置里的音量拉杆
     tick: true,
     autoFlow: false,
     proName: '',
@@ -172,7 +173,7 @@
     const s = {
       stages: state.stages, currentId: state.currentId,
       theme: state.theme,
-      fontScale: state.fontScale, sound: state.sound, tick: state.tick,
+      fontScale: state.fontScale, sound: state.sound, volume: state.volume, tick: state.tick,
       autoFlow: state.autoFlow, proName: state.proName, conName: state.conName,
       topic: state.topic, matchStage: state.matchStage,
     };
@@ -184,6 +185,7 @@
       if (!s) return;
       Object.assign(state, s);
       if (typeof state.matchStage !== 'string') state.matchStage = '2026 \u534e\u4e2d\u676f \u521d\u8d5b';
+      state.volume = clampVolume(state.volume);
       if (!Array.isArray(state.stages) || state.stages.length === 0) {
         state.stages = DEFAULT_STAGES.map(x => ({...x}));
         state.currentId = state.stages[0].id;
@@ -301,9 +303,18 @@
     if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
     return audioCtx;
   }
+  // 旧存档没有 volume，或被改坏时，回到 100%
+  function clampVolume(v) {
+    const n = Number(v);
+    return v == null || !isFinite(n) ? 1 : Math.min(1, Math.max(0, n));
+  }
   // 音量：先顶到设定值并保持过半时长再衰减。原来一起音就开始衰减，听感很弱。
   function beep(freq = 660, duration = 0.12, type = 'sine', gain = 0.15) {
     if (!state.sound) return;
+    // 拉杆按平方折算成增益：人耳对响度是对数感受，线性折算会让下半段几乎没变化
+    const vol = clampVolume(state.volume);
+    gain *= vol * vol;
+    if (gain <= 0.001) return;
     const ctx = ensureAudio();
     if (!ctx) return;
     const osc = ctx.createOscillator();
@@ -1385,6 +1396,9 @@
     document.getElementById('conName').value = state.conName;
     document.getElementById('swSound').classList.toggle('on', state.sound);
     document.getElementById('swTick').classList.toggle('on', state.tick);
+    const pct = Math.round(clampVolume(state.volume) * 100);
+    document.getElementById('volumeRange').value = pct;
+    document.getElementById('volumeValue').textContent = pct + '%';
     document.getElementById('swAutoFlow').classList.toggle('on', state.autoFlow);
     const iconSound = document.getElementById('iconSound');
     const btnSound = document.getElementById('btnSound');
@@ -1467,6 +1481,14 @@
     document.getElementById('swSound').addEventListener('click', () => {
       state.sound = !state.sound; applyInputs(); saveState();
     });
+    const volumeRange = document.getElementById('volumeRange');
+    volumeRange.addEventListener('input', (e) => {
+      state.volume = clampVolume(Number(e.target.value) / 100);
+      document.getElementById('volumeValue').textContent = Math.round(state.volume * 100) + '%';
+      saveState();
+    });
+    // 松手时响一声，直接听到当前音量
+    volumeRange.addEventListener('change', () => { beep30(); });
     document.getElementById('swTick').addEventListener('click', () => {
       state.tick = !state.tick; applyInputs(); saveState();
     });
