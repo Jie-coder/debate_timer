@@ -301,36 +301,45 @@
     if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
     return audioCtx;
   }
+  // 音量：先顶到设定值并保持过半时长再衰减。原来一起音就开始衰减，听感很弱。
   function beep(freq = 660, duration = 0.12, type = 'sine', gain = 0.15) {
     if (!state.sound) return;
     const ctx = ensureAudio();
     if (!ctx) return;
     const osc = ctx.createOscillator();
     const g = ctx.createGain();
+    const t0 = ctx.currentTime;
     osc.type = type;
     osc.frequency.value = freq;
-    g.gain.value = 0;
-    g.gain.linearRampToValueAtTime(gain, ctx.currentTime + 0.01);
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.linearRampToValueAtTime(gain, t0 + 0.01);
+    g.gain.setValueAtTime(gain, t0 + duration * 0.55);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
     osc.connect(g).connect(ctx.destination);
     osc.start();
-    osc.stop(ctx.currentTime + duration + 0.02);
+    osc.stop(t0 + duration + 0.02);
+  }
+  // 结束铃的一个音：正弦基音 + 少量方波泛音，同样峰值下更响、更穿透。
+  // 两层峰值相加不超过 1，不会削波。
+  function bellNote(freq, duration) {
+    beep(freq, duration, 'sine', 0.8);
+    beep(freq, duration, 'square', 0.15);
   }
   function beepEnd() {
     if (!state.sound) return;
-    beep(880, 0.2, 'sine', 0.2);
-    setTimeout(() => beep(660, 0.25, 'sine', 0.2), 220);
-    setTimeout(() => beep(440, 0.4, 'sine', 0.2), 480);
+    bellNote(880, 0.3);
+    setTimeout(() => bellNote(660, 0.32), 260);
+    setTimeout(() => bellNote(440, 0.7), 560);
     // vibrate if supported
     if (navigator.vibrate) navigator.vibrate([200, 80, 200]);
   }
   function beepTick() {
     if (!state.sound || !state.tick) return;
-    beep(880, 0.06, 'square', 0.08);
+    beep(880, 0.08, 'square', 0.3);
   }
   function beep30() {
     if (!state.sound) return;
-    beep(520, 0.18, 'triangle', 0.12);
+    beep(520, 0.3, 'triangle', 0.7);
   }
 
   /* ---------------- Rendering ---------------- */
@@ -383,6 +392,46 @@
         '</div>' +
       '</section>';
     wireCoverInputs();
+    fitCoverTeamNames();
+  }
+
+  /* 首页队名：字多了就缩字号，正反方始终用同一个字号。
+     先按正常版式量；放不下就把对阵区加宽（.is-long），还放不下再按较长的一方等比缩小。 */
+  const TEAM_NAME_MIN_PX = 14;
+  function fitCoverTeamNames() {
+    if (typeof getComputedStyle !== 'function') return;
+    const inputs = ['coverProSchool', 'coverConSchool'].map(id => document.getElementById(id)).filter(Boolean);
+    const matchup = document.querySelector('.cover-matchup');
+    if (inputs.length !== 2 || !matchup) return;
+    // 量的是 CSS 给的基准字号下文字实际要多宽，再和输入框可用宽度比
+    const measure = () => {
+      const out = { ratio: 1, basePx: 0 };
+      inputs.forEach(input => {
+        const cs = getComputedStyle(input);
+        const probe = document.createElement('span');
+        probe.className = input.className;
+        probe.textContent = input.value || '';
+        probe.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;pointer-events:none;' +
+          'white-space:pre;width:auto;padding:0;border:0;';
+        input.parentNode.appendChild(probe);
+        const need = probe.getBoundingClientRect().width;
+        out.basePx = parseFloat(getComputedStyle(probe).fontSize) || out.basePx;
+        probe.remove();
+        const avail = input.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+        if (need > 0 && avail > 0) out.ratio = Math.min(out.ratio, avail / need);
+      });
+      return out;
+    };
+    inputs.forEach(input => input.style.removeProperty('font-size'));
+    matchup.classList.remove('is-long');
+    let fit = measure();
+    if (fit.ratio >= 1) return;
+    matchup.classList.add('is-long');
+    fit = measure();
+    if (fit.ratio >= 1 || !fit.basePx) return;
+    // 留 2% 余量，免得不同字形的舍入把最后一个字挤出去
+    const px = Math.max(TEAM_NAME_MIN_PX, Math.floor(fit.basePx * fit.ratio * 0.98 * 10) / 10);
+    inputs.forEach(input => input.style.setProperty('font-size', px + 'px', 'important'));
   }
 
   function setFieldValue(id, value) {
@@ -395,6 +444,7 @@
     setFieldValue('coverTopic', state.topic || '');
     setFieldValue('coverProSchool', state.proName || '');
     setFieldValue('coverConSchool', state.conName || '');
+    fitCoverTeamNames();
   }
 
   function syncHeaderTopic() {
@@ -413,6 +463,7 @@
     };
     bind('coverMatchStage', 'matchStage', 40);
     bind('coverTopic', 'topic', 80, () => { syncHeaderTopic(); });
+    // updateTimes() 在首页会走 syncCoverFields()，顺带重新适配队名字号
     bind('coverProSchool', 'proName', 32, () => { updateTimes(); applyInputs(); });
     bind('coverConSchool', 'conName', 32, () => { updateTimes(); applyInputs(); });
   }
@@ -423,7 +474,7 @@
     const name = curName();
     stage.innerHTML = `
       <div class="single-timer">
-        <div class="single-label">${name}</div>
+        <div class="single-label">${escapeHtml(name)}</div>
         <div class="single-time editable-time" id="timeDisplay" data-target="single">${formatTime(state.remaining)}</div>
         <div class="progress-wrap">
           <div class="progress-meta">
@@ -922,7 +973,7 @@
       row.dataset.idx = idx;
       row.innerHTML = `
         <span class="stage-grip">⋮⋮</span>
-        <input class="stage-name-input" value="${stg.name.replace(/"/g, '&quot;')}" maxlength="10">
+        <input class="stage-name-input" value="${escapeHtml(stg.name)}" maxlength="10">
         <button class="stage-type-pill" data-type="${stg.type}" title="${isCover ? '\u9996\u9875\u4e0d\u53c2\u4e0e\u8ba1\u65f6' : '\u5207\u6362\u7c7b\u578b'}" ${isCover ? 'disabled' : ''}>${isCover ? '\u9996\u9875' : (stg.type === 'duel' ? '\u53cc' : '\u5355')}</button>
         <button class="stage-flow-pill"></button>
         <input type="number" class="stage-dur-input" value="${stg.duration}" min="0" step="10" ${isCover ? 'disabled' : ''}>
@@ -1206,6 +1257,104 @@
     setPresetStatus('已删除');
   }
 
+  /* ---------------- Share format (分享赛制) ----------------
+     只带环节（名称 / 单双计时 / 时长 / 交锋独立），不带主题、背景、辩题和队伍。
+     复制出去的文本形如「【辩论计时器赛制】11 环节 · 32:00｜DT1.xxxx」，导入时只认其中的
+     DT1.xxxx，所以连同聊天里的其他文字一起粘贴也能识别。 */
+  const SHARE_PREFIX = 'DT1.';
+  const SHARE_MAX_STAGES = 40;
+
+  function encodeFormat(stages) {
+    const rows = stages.filter(s => s.type !== 'cover').map(s => {
+      const row = [s.name, s.type === 'duel' ? 1 : 0, s.duration];
+      // 交锋 / 独立写成实际生效的值，对方不依赖按环节名推断也能得到同样的行为
+      if (s.type === 'duel') row.push(duelFlowOf(s) === 'solo' ? 1 : 0);
+      return row;
+    });
+    const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(rows))));
+    return SHARE_PREFIX + b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  // 粘贴来的内容不可信：逐项校验、截断，认不出来就返回 null
+  function decodeFormat(text) {
+    const m = String(text || '').match(/DT1\.([A-Za-z0-9_-]+)/);
+    if (!m) return null;
+    try {
+      let b64 = m[1].replace(/-/g, '+').replace(/_/g, '/');
+      while (b64.length % 4) b64 += '=';
+      const rows = JSON.parse(decodeURIComponent(escape(atob(b64))));
+      if (!Array.isArray(rows)) return null;
+      const stages = [];
+      rows.slice(0, SHARE_MAX_STAGES).forEach(row => {
+        if (!Array.isArray(row)) return;
+        const name = String(row[0] == null ? '' : row[0]).trim().slice(0, 10);
+        const duration = Math.round(Number(row[2]));
+        if (!name || !isFinite(duration)) return;
+        const st = { name, type: row[1] === 1 ? 'duel' : 'single', duration: Math.min(5999, Math.max(10, duration)) };
+        if (st.type === 'duel' && (row[3] === 0 || row[3] === 1)) st.duelFlow = row[3] === 1 ? 'solo' : 'relay';
+        stages.push(st);
+      });
+      return stages.length ? stages : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function setShareStatus(text) {
+    const el = document.getElementById('shareStatus');
+    if (!el) return;
+    el.textContent = text || '';
+    if (text) setTimeout(() => { if (el.textContent === text) el.textContent = ''; }, 2600);
+  }
+
+  function copyText(text) {
+    const legacy = () => new Promise((resolve, reject) => {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;';
+      document.body.appendChild(ta);
+      ta.select();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) {}
+      ta.remove();
+      if (ok) resolve(); else reject(new Error('copy'));
+    });
+    // 双击打开的单 HTML 等场景下 Clipboard API 可能不可用或被拒，退回旧办法
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      return navigator.clipboard.writeText(text).catch(legacy);
+    }
+    return legacy();
+  }
+
+  function shareFormat() {
+    const stages = state.stages.filter(s => s.type !== 'cover');
+    if (!stages.length) { setShareStatus('还没有环节'); return; }
+    const totalSeconds = stages.reduce((sum, stg) => sum + (Number(stg.duration) || 0) * (stg.type === 'duel' ? 2 : 1), 0);
+    const text = '【辩论计时器赛制】' + stages.length + ' 环节 · ' + formatTime(totalSeconds) + '｜' + encodeFormat(stages);
+    // 同时填进输入框并选中：万一浏览器不让复制，还能手动 Ctrl+C
+    const input = document.getElementById('shareCodeInput');
+    if (input) { input.value = text; input.select(); }
+    copyText(text).then(
+      () => setShareStatus('已复制，发给对方即可'),
+      () => {
+        if (input) { input.focus(); input.select(); }
+        setShareStatus('复制失败，请手动复制输入框里的代码');
+      }
+    );
+  }
+
+  function importFormat() {
+    const input = document.getElementById('shareCodeInput');
+    const text = (input ? input.value : '').trim();
+    if (!text) { setShareStatus('先粘贴赛制代码'); return; }
+    const stages = decodeFormat(text);
+    if (!stages) { setShareStatus('认不出这段代码'); return; }
+    applyStageSet(stages, '分享的赛制');
+    if (input) input.value = '';
+    setShareStatus('已导入 ' + stages.length + ' 个环节');
+  }
+
   /* ---------------- Drawer ---------------- */
   const drawer = document.getElementById('drawer');
   const overlay = document.getElementById('overlay');
@@ -1225,6 +1374,8 @@
     document.querySelectorAll('#fontGroup .chip').forEach(c => {
       c.classList.toggle('active', parseFloat(c.dataset.scale) === state.fontScale);
     });
+    // 各主题字体、字重不同，队名要重新量
+    fitCoverTeamNames();
   }
 
   
@@ -1298,6 +1449,12 @@
       if (e.key === 'Enter') saveTimerPresetFromInput();
     });
 
+    document.getElementById('shareFormatBtn').addEventListener('click', shareFormat);
+    document.getElementById('importFormatBtn').addEventListener('click', importFormat);
+    document.getElementById('shareCodeInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') importFormat();
+    });
+
     document.getElementById('proName').addEventListener('input', (e) => {
       state.proName = e.target.value.slice(0, 20) || '正方';
       updateTimes(); saveState();
@@ -1347,6 +1504,10 @@
         state.sound = !state.sound; applyInputs(); saveState();
       }
     });
+
+    // 窗口大小、全屏、网页字体加载完成都会改变队名可用宽度或字宽
+    if (typeof window.addEventListener === 'function') window.addEventListener('resize', fitCoverTeamNames);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitCoverTeamNames);
   }
 
   /* ---------------- Init ---------------- */

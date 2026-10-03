@@ -819,6 +819,13 @@
     color: var(--ink-3);
     line-height: 1.5;
   }
+  .share-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
 
   .stages-list {
     display: flex;
@@ -2101,6 +2108,12 @@ body[data-screen="cover"] #btnNext {
   align-items: start;
   gap: clamp(24px, 5vw, 72px);
   width: min(960px, 92%);
+}
+
+/* 队名较长时加宽对阵区、收窄间距；再放不下由 fitCoverTeamNames() 把两边字号一起缩小 */
+.cover-matchup.is-long {
+  width: min(1200px, 100%);
+  gap: clamp(16px, 2.4vw, 36px);
 }
 
 .cover-team {
