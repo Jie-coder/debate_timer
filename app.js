@@ -408,7 +408,7 @@
 
   /* 首页队名：字多了就缩字号，正反方始终用同一个字号。
      先按正常版式量；放不下就把对阵区加宽（.is-long），还放不下再按较长的一方等比缩小。 */
-  const TEAM_NAME_MIN_PX = 14;
+  const TEAM_NAME_MIN_PX = 12;
   function fitCoverTeamNames() {
     if (typeof getComputedStyle !== 'function') return;
     const inputs = ['coverProSchool', 'coverConSchool'].map(id => document.getElementById(id)).filter(Boolean);
@@ -899,6 +899,7 @@
   function renderModeTabs() {
     const tabs = document.getElementById('modeTabs');
     tabs.innerHTML = '';
+    let active = null;
     state.stages.forEach(s => {
       const b = document.createElement('button');
       b.className = 'mode-tab' + (s.id === state.currentId ? ' active' : '');
@@ -906,7 +907,27 @@
       b.textContent = s.name;
       if (s.type === 'duel') b.title = '双计时 · ' + duelFlowTitle(duelFlowOf(s));
       tabs.appendChild(b);
+      if (s.id === state.currentId) active = b;
     });
+    // 手机上导航是一行横向滑动的，把当前环节滚到中间；桌面不滚动，这里不起作用
+    if (active) {
+      const box = tabs.getBoundingClientRect(), cur = active.getBoundingClientRect();
+      tabs.scrollLeft = (tabs.scrollLeft || 0) + cur.left - box.left - (box.width - cur.width) / 2;
+    }
+  }
+
+  // iPhone 的 Safari 不支持网页全屏：拿不到接口就什么都不做，按钮也会被隐藏
+  function fullscreenApi() {
+    const el = document.documentElement;
+    const request = el.requestFullscreen || el.webkitRequestFullscreen;
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    return request && exit ? { el, request, exit } : null;
+  }
+  function toggleFullscreen() {
+    const api = fullscreenApi();
+    if (!api) return;
+    if (!(document.fullscreenElement || document.webkitFullscreenElement)) api.request.call(api.el);
+    else api.exit.call(document);
   }
 
   function updateStartButton() {
@@ -1439,10 +1460,9 @@
       applyInputs(); saveState();
     });
 
-    document.getElementById('btnFullscreen').addEventListener('click', () => {
-      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
-      else document.exitFullscreen();
-    });
+    const btnFullscreen = document.getElementById('btnFullscreen');
+    btnFullscreen.addEventListener('click', toggleFullscreen);
+    if (!fullscreenApi()) btnFullscreen.style.display = 'none';
 
     document.getElementById('themeGroup').addEventListener('click', (e) => {
       const b = e.target.closest('.chip');
@@ -1518,10 +1538,7 @@
         updateDuelActive();
       }
       else if (e.key === 'Tab') { e.preventDefault(); nextStage(); }
-      else if (e.key.toLowerCase() === 'f') {
-        if (!document.fullscreenElement) document.documentElement.requestFullscreen();
-        else document.exitFullscreen();
-      }
+      else if (e.key.toLowerCase() === 'f') toggleFullscreen();
       else if (e.key.toLowerCase() === 'm') {
         state.sound = !state.sound; applyInputs(); saveState();
       }

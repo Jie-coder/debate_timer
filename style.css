@@ -3340,3 +3340,319 @@ html body[data-theme].has-custom-background .cover-page {
   line-height: 1.6;
 }
 .background-hint:empty { display: none; }
+
+/* ==========================================================================
+   平板 / 手机适配
+   几种情况叠加：窄屏（宽 ≤760px，手机竖屏）、矮屏（高 ≤520px 的手机横屏，以及
+   宽 ≤1100、高 ≤700 的小平板横屏）、竖屏平板（双计时改上下排、页头分两行）、
+   触屏（pointer: coarse，放大点击区域）。横屏平板和桌面版式不变。
+   计时数字一律取「可用宽度 ÷ 字宽」和「可用高度」里较小的一个，不再写死 vw：
+   手机上没有桌面那几款字体，回退字体更宽，--time-em 按各主题最宽的回退字体估。
+   ========================================================================== */
+
+/* 「00:00」五个字符的总宽（em）；--tap-extra 是触屏上按钮加高后要让出的高度 */
+html body[data-theme] { --time-em: 3.05; --tap-extra: 0px; }
+html body[data-theme="arena"],
+html body[data-theme="broadcast"] { --time-em: 2.6; }
+html body[data-theme="academy"] { --time-em: 2.8; }
+html body[data-theme="soft"] { --time-em: 2.75; }
+
+/* 手机浏览器的 100vh 把地址栏也算进去，底栏按钮会被挡住 */
+@supports (height: 100dvh) {
+  body { height: 100dvh; }
+  .drawer { height: 100dvh; }
+}
+
+/* 复古终端的标识比别的主题宽，平板宽度下别被环节导航挤压重叠 */
+html body[data-theme="terminal"] .brand { flex-shrink: 0; }
+/* 右上角三个按钮不参与收缩，否则窄一点就会被挤出外框 */
+html body[data-theme] .header-actions { flex-shrink: 0; }
+
+/* 平板竖屏：双计时并排时每块面板只有三百多像素宽，数字再加一道宽度上限 */
+@media (min-width: 761px) and (max-width: 1180px) {
+  html body[data-theme] .stage-duel .duel-time {
+    font-size: min(var(--duel-time-size), max(40px, calc(78cqh - var(--duel-fixed))), calc((50cqw - 56px) / var(--time-em))) !important;
+  }
+}
+
+/* ---------- 触屏：放大点击区域（放在窄屏 / 矮屏之前，空间紧张时由它们再收回） ---------- */
+@media (pointer: coarse) {
+  html { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  html body[data-theme] { --tap-extra: 10px; }
+  html body[data-theme] .icon-btn { width: 40px !important; height: 40px !important; }
+  html body[data-theme] .header-actions { gap: 6px !important; }
+  html body[data-theme] .mode-tab { padding-block: 8px !important; }
+  html body[data-theme] .timer-action-btn,
+  html body[data-theme] .stage-duel .duel-reset-btn { min-height: 40px !important; padding-inline: 16px !important; }
+  /* 点面板是切换发言方，长按别选中文字 */
+  html body[data-theme] .duel-panel { -webkit-user-select: none; user-select: none; }
+  /* iOS 聚焦字号小于 16px 的输入框会自动放大整页 */
+  .drawer input.input,
+  .drawer .stage-name-input,
+  .drawer .stage-dur-input { font-size: 16px !important; }
+  .drawer .stage-type-pill,
+  .drawer .stage-flow-pill,
+  .drawer .stage-del,
+  .drawer .stage-dur-input,
+  .drawer .chip,
+  .drawer .preset-new-btn { min-height: 34px; }
+  .drawer .stage-del { min-width: 32px; }
+  .drawer .volume-range { height: 30px; }
+  /* 开关本体不放大，只把可点范围向外扩一圈 */
+  .drawer .switch::before { content: ""; position: absolute; inset: -12px -10px; }
+}
+
+/* ---------- 窄屏：手机竖屏 ---------- */
+@media (max-width: 760px) {
+  /* 环节导航：一行横向滑动，不再折成三四行；当前环节由 renderModeTabs() 滚到可见处 */
+  html body[data-theme] .mode-tabs {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+  html body[data-theme] .mode-tabs::-webkit-scrollbar { display: none; }
+  html body[data-theme] .mode-tab { flex: 0 0 auto; white-space: nowrap; }
+  /* 署名收进 10px 的外边距里，不压外框 */
+  .credit { right: 12px; height: 10px; }
+  /* 标识的副标题在缩小后的框里别折行 */
+  html body[data-theme] .brand-mark::before,
+  html body[data-theme] .brand-mark::after { white-space: nowrap !important; }
+  /* 首页底栏只剩「下一环节」，占满整行 */
+  html body[data-theme][data-screen="cover"] .controls { grid-template-columns: minmax(0, 1fr) !important; }
+
+  /* 单计时：数字按舞台宽高定大小 */
+  .stage-single { container-type: size; }
+  html body[data-theme] .stage-single .single-timer { --single-pad: 0px; }
+  html body[data-theme="soft"] .stage-single .single-timer { --single-pad: 48px; padding: 18px 24px !important; }
+  html body[data-theme] .stage-single .single-time {
+    padding-inline: 0 !important;
+    font-size: min(calc((100cqw - var(--single-pad)) / var(--time-em)), 34cqh, 240px) !important;
+  }
+  html body[data-theme="terminal"] .stage-single .single-label { font-size: clamp(13px, 4.6cqw, 22px) !important; }
+
+  /* 首页：辩题按内容定高，留白随屏高收缩；队名占满整行，宽度不随字号变 */
+  html body[data-theme] .cover-page { gap: clamp(12px, 3.2vh, 36px) !important; padding-block: clamp(10px, 3vh, 42px) !important; }
+  html body[data-theme] .cover-head { gap: clamp(8px, 2.2vh, 20px) !important; }
+  html body[data-theme] .cover-topic-input { min-height: 0 !important; height: 2.3em; }
+  html body[data-theme] .cover-matchup { gap: 10px !important; }
+  html body[data-theme] .cover-team { width: 100%; }
+  html body[data-theme="soft"] .cover-team { padding: 12px 14px !important; }
+  html body[data-theme] .cover-vs { font-size: 22px !important; }
+  html body[data-theme="soft"] .cover-vs { width: 44px !important; height: 44px !important; font-size: 15px !important; }
+}
+
+/* 手机上的首页：单列不被内容撑宽（电视转播的比赛名横幅会），实在放不下时可以上下滑动 */
+@media (max-width: 760px), (max-height: 520px), (max-height: 700px) and (max-width: 1100px) and (orientation: landscape) {
+  html body[data-theme] .stage-cover { overflow-y: auto !important; }
+  html body[data-theme] .cover-page {
+    grid-template-columns: minmax(0, 1fr);
+    flex: 0 0 auto;
+    height: auto !important;
+    min-height: 100% !important;
+    align-content: safe center;
+  }
+  html body[data-theme] .cover-head,
+  html body[data-theme] .cover-kicker,
+  html body[data-theme] .cover-match-input { min-width: 0; max-width: 100% !important; }
+}
+
+/* 竖屏（手机和平板）：双计时上下两块各占一半高度，比左右并排的数字大得多。
+   中间的「交锋 / 独立」圆钮会压住进度条和方名，这里不显示，仍可在设置里切换 */
+@media (max-width: 760px), (orientation: portrait) and (max-width: 1180px) {
+  html body[data-theme] .stage-duel .duel {
+    container-type: size;
+    height: 100% !important;
+    min-height: 0 !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) !important;
+  }
+  html body[data-theme="arena"] .stage-duel .duel,
+  html body[data-theme="soft"] .stage-duel .duel,
+  html body[data-theme="terminal"] .stage-duel .duel { gap: 10px !important; }
+  html body[data-theme] .stage-duel .duel-time {
+    font-size: min(calc((100cqw - 40px) / var(--time-em)), max(36px, calc(52cqh - 80px - var(--tap-extra))), 236px) !important;
+  }
+  html body[data-theme] .stage-duel .duel-divider { display: none !important; }
+}
+
+/* 平板竖屏宽度：页头放不下「标识 + 环节导航 + 按钮」三样并排，导航单独占一行横向滑动；
+   底栏文字不折行 */
+@media (min-width: 761px) and (max-width: 1023px) {
+  html body[data-theme] header {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 16px;
+    row-gap: 8px;
+  }
+  html body[data-theme] .mode-tabs {
+    grid-column: 1 / -1;
+    order: 3;
+    margin-top: 0 !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+  html body[data-theme] .mode-tabs::-webkit-scrollbar { display: none; }
+  html body[data-theme] .mode-tab { flex: 0 0 auto; white-space: nowrap; }
+  html body[data-theme] .session-flow { flex: 1 1 auto; min-width: 0 !important; }
+  html body[data-theme] .flow-label { flex: 0 0 auto; white-space: nowrap; }
+  html body[data-theme] .controls { flex: 0 0 auto; gap: 12px !important; }
+  html body[data-theme] .controls .btn { white-space: nowrap; }
+}
+
+/* 手机和竖屏平板上双计时面板共用的紧凑排法：
+   去掉「A · 正方」小标签，重置按钮挪到方名行左侧，省下一整行高度给数字 */
+@media (max-width: 760px), (max-height: 520px), (max-height: 700px) and (max-width: 1100px) and (orientation: landscape), (orientation: portrait) and (max-width: 1180px) {
+  html body[data-theme] .stage-duel .duel-panel {
+    grid-template-rows: auto minmax(0, 1fr) auto !important;
+    padding: clamp(8px, 3cqh, 22px) 16px clamp(8px, 2.6cqh, 18px) !important;
+    row-gap: clamp(2px, 1.2cqh, 10px) !important;
+  }
+  /* 重置和方名行叠在同一格，所有子项都要钉在第 1 列，否则自动排版会挤出第二列 */
+  html body[data-theme] .stage-duel .duel-panel > * { grid-column: 1; }
+  html body[data-theme] .stage-duel .duel-side {
+    grid-row: 1 !important;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
+    align-items: center !important;
+    justify-items: stretch !important;
+    gap: 8px !important;
+  }
+  html body[data-theme] .stage-duel .duel-side-label { visibility: hidden; }
+  html body[data-theme] .stage-duel .duel-status { text-align: right !important; justify-self: end; }
+  html body[data-theme] .stage-duel .duel-side-name { font-size: clamp(16px, 5.5cqw, 26px) !important; }
+  html body[data-theme] .stage-duel .duel-reset-btn {
+    grid-row: 1 !important;
+    grid-column: 1;
+    justify-self: start !important;
+    align-self: center !important;
+    /* 基础样式里留着绝对定位时代的 top / left，改成 relative 后要清掉 */
+    position: relative !important;
+    inset: auto !important;
+    z-index: 1;
+  }
+  html body[data-theme] .stage-duel .duel-progress { grid-row: 3 !important; }
+}
+
+/* ---------- 矮屏：手机横屏。页头、底栏各压成一行，把高度留给计时 ---------- */
+@media (max-height: 520px), (max-height: 700px) and (max-width: 1100px) and (orientation: landscape) {
+  /* 底边多留一点，署名仍在外框外侧，不压底栏按钮 */
+  body { padding: 6px 6px 14px; }
+  .credit { right: 8px; height: 14px; font-size: 9px; }
+
+  html body[data-theme] header {
+    display: flex !important;
+    flex-wrap: nowrap;
+    align-items: center !important;
+    gap: 12px;
+    padding: 6px 14px !important;
+  }
+  /* 计时页不显示标识和辩题，首页没有环节导航所以保留标识 */
+  html body[data-theme]:not([data-screen="cover"]) .brand { display: none !important; }
+  html body[data-theme] .brand { min-width: 0 !important; }
+  html body[data-theme] .brand-topic { display: none !important; }
+  html body[data-theme] .mode-tabs {
+    flex: 1 1 auto;
+    order: 0;
+    margin-top: 0 !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+  html body[data-theme] .mode-tabs::-webkit-scrollbar { display: none; }
+  html body[data-theme] .mode-tab { flex: 0 0 auto; white-space: nowrap; padding-block: 5px !important; }
+  html body[data-theme] .header-actions { flex: 0 0 auto; margin-top: 0 !important; margin-left: auto; }
+
+  html body[data-theme] main { padding: 6px 16px !important; }
+
+  html body[data-theme] footer {
+    display: flex !important;
+    flex-direction: row;
+    align-items: center !important;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 14px 8px !important;
+  }
+  /* 环节点排成一行，放不下的从右边裁掉；只裁横向，典雅主题的菱形上下不被削 */
+  html body[data-theme] .session-flow { flex: 1 1 auto; min-width: 0 !important; overflow-x: clip; }
+  html body[data-theme] .flow-label { flex: 0 0 auto; white-space: nowrap; }
+  html body[data-theme] .flow-dots { flex-wrap: nowrap !important; max-width: none !important; }
+  html body[data-theme] .controls { display: flex !important; flex: 0 0 auto; width: auto; gap: 8px !important; }
+  html body[data-theme] .controls .btn { min-height: 34px; padding-block: 6px !important; }
+
+  /* 单计时：三行（环节名、数字、进度条），重置按钮放到环节名那一行的右端 */
+  .stage-single { container-type: size; }
+  html body[data-theme] .stage-single .single-timer {
+    --single-pad: 0px;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-content: center;
+    align-items: center;
+    justify-items: center;
+    gap: 6px 8px !important;
+  }
+  html body[data-theme="soft"] .stage-single .single-timer { --single-pad: 56px; padding: 6px 28px !important; }
+  html body[data-theme] .stage-single .single-label { grid-area: 1 / 2; font-size: clamp(14px, 7cqh, 22px) !important; white-space: nowrap; }
+  html body[data-theme] .stage-single .timer-actions { grid-area: 1 / 3; justify-self: end; margin-top: 0 !important; }
+  html body[data-theme] .stage-single .single-time { grid-area: 2 / 1 / auto / -1; }
+  html body[data-theme] .stage-single .progress-wrap { grid-area: 3 / 1 / auto / -1; gap: 4px !important; }
+  html body[data-theme] .stage-single .single-time {
+    padding-inline: 0 !important;
+    font-size: min(calc((100cqw - var(--single-pad)) / var(--time-em)), max(40px, calc(106cqh - 96px - var(--tap-extra))), 280px) !important;
+  }
+
+  /* 双计时：横屏一律左右并排（窄于 760px 的手机横屏也是） */
+  html body[data-theme] .stage-duel .duel {
+    container-type: size;
+    height: 100% !important;
+    min-height: 0 !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    grid-template-rows: minmax(0, 1fr) !important;
+  }
+  html body[data-theme] .stage-duel .duel-panel {
+    padding: clamp(6px, 4cqh, 18px) 14px clamp(6px, 3.5cqh, 16px) !important;
+    row-gap: clamp(2px, 2cqh, 8px) !important;
+  }
+  html body[data-theme] .stage-duel .duel-side-name { font-size: clamp(16px, 9cqh, 24px) !important; }
+  html body[data-theme] .stage-duel .duel-time {
+    font-size: min(calc((50cqw - 44px) / var(--time-em)), max(36px, calc(104cqh - 88px - var(--tap-extra))), 236px) !important;
+  }
+  html body[data-theme] .stage-duel .duel-divider { display: flex !important; transform: translate(-50%, -50%) scale(0.7) !important; }
+  html body[data-theme="broadcast"] .stage-duel .duel-divider { transform: translate(-50%, -50%) rotate(45deg) scale(0.7) !important; }
+
+  /* 首页：对阵区恢复左右排，字号按屏高收小 */
+  html body[data-theme] .cover-page { gap: clamp(6px, 3.4vh, 18px) !important; padding: clamp(6px, 2.6vh, 16px) 20px !important; }
+  html body[data-theme] .cover-head { gap: clamp(4px, 2vh, 12px) !important; }
+  html body[data-theme] .cover-match-input { font-size: clamp(12px, 4.4vh, 18px) !important; }
+  html body[data-theme] .cover-topic-input {
+    font-size: clamp(24px, 11vh, 46px) !important;
+    min-height: 0 !important;
+    height: 2.3em;
+    padding-block: 0 4px !important;
+  }
+  html body[data-theme] .cover-title-rule { margin-top: 0 !important; }
+  html body[data-theme] .cover-matchup {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
+    align-items: center !important;
+    width: min(960px, 96%) !important;
+    gap: 16px !important;
+  }
+  html body[data-theme] .cover-team { gap: 6px !important; }
+  html body[data-theme="soft"] .cover-team { padding: 8px 14px !important; }
+  html body[data-theme] .cover-team-tag { font-size: 12px !important; padding-block: 3px !important; }
+  html body[data-theme] .cover-team-name { font-size: clamp(16px, 6.5vh, 28px); }
+  html body[data-theme] .cover-vs { font-size: 22px !important; }
+  html body[data-theme="soft"] .cover-vs { width: 40px !important; height: 40px !important; font-size: 14px !important; }
+}
+
+/* 辩题输入框跟着内容长高（一行就一行），不支持的浏览器用上面的固定两行高 */
+@supports (field-sizing: content) {
+  @media (max-width: 760px) {
+    html body[data-theme] .cover-topic-input { field-sizing: content; height: auto; max-height: 3.4em; }
+  }
+  @media (max-height: 520px), (max-height: 700px) and (max-width: 1100px) and (orientation: landscape) {
+    html body[data-theme] .cover-topic-input { field-sizing: content; height: auto; max-height: 2.3em; }
+  }
+}
