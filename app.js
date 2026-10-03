@@ -377,6 +377,7 @@
       renderSingle();
     }
     updateTimes();
+    scrollTabsToActive();
   }
 
   function renderCover() {
@@ -907,24 +908,103 @@
     setCurrent(state.stages[n].id);
   }
 
+  /* ---------------- 环节导航（一行横向滚动） + 全部环节面板 ---------------- */
+  let modeTabsShown = false; // 页面初始化时直接定位，初始化完成后换环节才平滑滚动
   function renderModeTabs() {
     const tabs = document.getElementById('modeTabs');
-    tabs.innerHTML = '';
-    let active = null;
+    let buttons = Array.from(tabs.children);
+    // 环节没增删、没换顺序时只改类名和文字，不重建：
+    // 这样当前环节的色块有过渡，滚动位置也不会先跳回开头
+    const same = buttons.length === state.stages.length &&
+      state.stages.every((s, i) => buttons[i].dataset.id === s.id);
+    if (!same) {
+      const keep = tabs.scrollLeft || 0;
+      tabs.innerHTML = '';
+      buttons = state.stages.map(s => {
+        const b = document.createElement('button');
+        b.dataset.id = s.id;
+        tabs.appendChild(b);
+        return b;
+      });
+      tabs.scrollLeft = keep;
+    }
+    state.stages.forEach((s, i) => {
+      const b = buttons[i];
+      b.className = 'mode-tab' + (s.id === state.currentId ? ' active' : '');
+      if (b.textContent !== s.name) b.textContent = s.name;
+      b.title = s.type === 'duel' ? '双计时 · ' + duelFlowTitle(duelFlowOf(s)) : '';
+    });
+    scrollTabsToActive();
+    renderStagePanel();
+  }
+
+  // 把当前环节滚到这一行的中间：导航跟着环节往前走。
+  // 首页不显示导航、量不到尺寸，所以 renderStage() 切完页面后还会再调一次
+  function scrollTabsToActive(instant) {
+    const tabs = document.getElementById('modeTabs');
+    const active = Array.from(tabs.children).find(b => String(b.className).indexOf('active') >= 0);
+    const box = tabs.getBoundingClientRect();
+    if (active && box.width > 0) {
+      const cur = active.getBoundingClientRect();
+      const left = (tabs.scrollLeft || 0) + cur.left - box.left - (box.width - cur.width) / 2;
+      const reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const smooth = modeTabsShown && !instant && !reduce;
+      if (typeof tabs.scrollTo === 'function') tabs.scrollTo({ left, behavior: smooth ? 'smooth' : 'auto' });
+      else tabs.scrollLeft = left;
+    }
+    updateTabsFade();
+  }
+
+  // 还能往哪边滚，就给哪边加淡出（样式在 .mode-tabs.fade-left / .fade-right）
+  function updateTabsFade() {
+    const tabs = document.getElementById('modeTabs');
+    const max = (tabs.scrollWidth || 0) - (tabs.clientWidth || 0);
+    tabs.classList.toggle('fade-left', (tabs.scrollLeft || 0) > 2);
+    tabs.classList.toggle('fade-right', (tabs.scrollLeft || 0) < max - 2);
+  }
+
+  // 「…」打开的面板：列出全部环节（序号、名称、时长），点一下直接跳过去
+  function renderStagePanel() {
+    const list = document.getElementById('stagePanelList');
+    list.innerHTML = '';
+    let no = 0, total = 0;
     state.stages.forEach(s => {
       const b = document.createElement('button');
-      b.className = 'mode-tab' + (s.id === state.currentId ? ' active' : '');
+      b.type = 'button';
+      b.className = 'mode-tab stage-panel-item' + (s.id === state.currentId ? ' active' : '');
       b.dataset.id = s.id;
-      b.textContent = s.name;
-      if (s.type === 'duel') b.title = '双计时 · ' + duelFlowTitle(duelFlowOf(s));
-      tabs.appendChild(b);
-      if (s.id === state.currentId) active = b;
+      const add = (cls, text) => {
+        const span = document.createElement('span');
+        span.className = cls;
+        span.textContent = text;
+        b.appendChild(span);
+      };
+      if (s.type === 'cover') {
+        add('stage-panel-no', '');
+        add('stage-panel-name', s.name);
+      } else {
+        no += 1;
+        total += (Number(s.duration) || 0) * (s.type === 'duel' ? 2 : 1);
+        add('stage-panel-no', String(no));
+        add('stage-panel-name', s.name);
+        add('stage-panel-meta', (s.type === 'duel' ? '双 ' : '') + formatTime(s.duration));
+      }
+      list.appendChild(b);
     });
-    // 手机上导航是一行横向滑动的，把当前环节滚到中间；桌面不滚动，这里不起作用
-    if (active) {
-      const box = tabs.getBoundingClientRect(), cur = active.getBoundingClientRect();
-      tabs.scrollLeft = (tabs.scrollLeft || 0) + cur.left - box.left - (box.width - cur.width) / 2;
-    }
+    document.getElementById('stagePanelTitle').textContent = '全部环节 · ' + no + ' 个 · 共 ' + formatTime(total);
+  }
+
+  function isStagePanelOpen() {
+    return document.getElementById('stagePanel').classList.contains('open');
+  }
+  function setStagePanel(open) {
+    const panel = document.getElementById('stagePanel');
+    panel.classList.toggle('open', open);
+    document.getElementById('btnAllStages').setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (!open || typeof panel.querySelector !== 'function') return;
+    // 环节多到面板要滚动时，把当前环节露出来
+    const cur = panel.querySelector('.stage-panel-item.active');
+    if (cur && typeof cur.scrollIntoView === 'function') cur.scrollIntoView({ block: 'nearest' });
   }
 
   // iPhone 的 Safari 不支持网页全屏：拿不到接口就什么都不做，按钮也会被隐藏
@@ -1401,7 +1481,7 @@
   /* ---------------- Drawer ---------------- */
   const drawer = document.getElementById('drawer');
   const overlay = document.getElementById('overlay');
-  function openDrawer() { drawer.classList.add('open'); overlay.classList.add('show'); }
+  function openDrawer() { setStagePanel(false); drawer.classList.add('open'); overlay.classList.add('show'); }
   function closeDrawer() { drawer.classList.remove('open'); overlay.classList.remove('show'); }
 
   /* ---------------- Theme + font ---------------- */
@@ -1439,9 +1519,32 @@
 
   /* ---------------- Event wiring ---------------- */
   function wire() {
-    document.getElementById('modeTabs').addEventListener('click', (e) => {
+    const modeTabs = document.getElementById('modeTabs');
+    modeTabs.addEventListener('click', (e) => {
       const b = e.target.closest('.mode-tab');
-      if (b) setCurrent(b.dataset.id);
+      if (!b) return;
+      setStagePanel(false);
+      setCurrent(b.dataset.id);
+    });
+    modeTabs.addEventListener('scroll', updateTabsFade, { passive: true });
+    // 鼠标滚轮上下滚也能横向翻环节（触控板的横向滚动原样放行）
+    modeTabs.addEventListener('wheel', (e) => {
+      if (modeTabs.scrollWidth <= modeTabs.clientWidth) return;
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+      e.preventDefault();
+      modeTabs.scrollLeft += e.deltaY;
+    }, { passive: false });
+
+    // 全部环节面板：点「…」开关，点环节跳转并收起，点面板外或按 Esc 收起
+    document.getElementById('btnAllStages').addEventListener('click', () => setStagePanel(!isStagePanelOpen()));
+    document.getElementById('stagePanel').addEventListener('click', (e) => {
+      const b = e.target.closest('.stage-panel-item');
+      if (!b) return;
+      setStagePanel(false);
+      setCurrent(b.dataset.id);
+    });
+    document.addEventListener('click', (e) => {
+      if (isStagePanelOpen() && !(e.target.closest && e.target.closest('#modeNav'))) setStagePanel(false);
     });
     document.querySelectorAll('.add-chip').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1531,6 +1634,7 @@
     });
 
     document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && isStagePanelOpen()) { setStagePanel(false); return; }
       // Let settings controls keep native Tab / Space keyboard behavior.
       if (drawer.classList.contains('open')) {
         if (e.key === 'Escape') closeDrawer();
@@ -1559,8 +1663,11 @@
     });
 
     // 窗口大小、全屏、网页字体加载完成都会改变队名可用宽度或字宽
-    if (typeof window.addEventListener === 'function') window.addEventListener('resize', fitCoverTeamNames);
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitCoverTeamNames);
+    if (typeof window.addEventListener === 'function') {
+      window.addEventListener('resize', fitCoverTeamNames);
+      window.addEventListener('resize', () => scrollTabsToActive(true));
+    }
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { fitCoverTeamNames(); scrollTabsToActive(true); });
   }
 
   /* ---------------- Init ---------------- */
@@ -1589,4 +1696,5 @@
   updateFlowDots();
   updateStartButton();
   wire();
+  modeTabsShown = true;
 })();
