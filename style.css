@@ -3368,6 +3368,21 @@ html body[data-theme="terminal"] .brand { flex-shrink: 0; }
 /* 右上角三个按钮不参与收缩，否则窄一点就会被挤出外框 */
 html body[data-theme] .header-actions { flex-shrink: 0; }
 
+/* 底栏的「切换 / 重置」只给手机的双计时页用，其余情况不显示 */
+#btnSwitch,
+#btnResetAll { display: none !important; }
+@media (max-width: 760px), (max-height: 520px), (max-height: 700px) and (max-width: 1100px) and (orientation: landscape) {
+  /* 手机上换环节用顶部导航，底栏三个位置留给：切换 · 开始/暂停 · 重置 */
+  html body[data-screen="duel"] #btnPrev,
+  html body[data-screen="duel"] #btnNext { display: none !important; }
+  html body[data-screen="duel"] #btnSwitch,
+  html body[data-screen="duel"] #btnResetAll { display: inline-flex !important; }
+  /* 面板里各自的小「重置」收起来：整块面板都是切换区，免得手指点到左上角把时间清掉 */
+  html body[data-theme] .stage-duel .duel-reset-btn { display: none !important; }
+  /* 点面板切换发言方时高亮马上跟上，不拖 0.3 秒 */
+  html body[data-theme] .stage-duel .duel-panel { transition-duration: 0.12s; }
+}
+
 /* 平板竖屏：双计时并排时每块面板只有三百多像素宽，数字再加一道宽度上限 */
 @media (min-width: 761px) and (max-width: 1180px) {
   html body[data-theme] .stage-duel .duel-time {
@@ -3384,6 +3399,7 @@ html body[data-theme] .header-actions { flex-shrink: 0; }
   html body[data-theme] .mode-tab { padding-block: 8px !important; }
   html body[data-theme] .timer-action-btn,
   html body[data-theme] .stage-duel .duel-reset-btn { min-height: 40px !important; padding-inline: 16px !important; }
+  html body[data-theme] .controls .btn { min-height: 44px; }
   /* 点面板是切换发言方，长按别选中文字 */
   html body[data-theme] .duel-panel { -webkit-user-select: none; user-select: none; }
   /* iOS 聚焦字号小于 16px 的输入框会自动放大整页 */
@@ -3580,7 +3596,7 @@ html body[data-theme] .header-actions { flex-shrink: 0; }
   html body[data-theme] .flow-label { flex: 0 0 auto; white-space: nowrap; }
   html body[data-theme] .flow-dots { flex-wrap: nowrap !important; max-width: none !important; }
   html body[data-theme] .controls { display: flex !important; flex: 0 0 auto; width: auto; gap: 8px !important; }
-  html body[data-theme] .controls .btn { min-height: 34px; padding-block: 6px !important; }
+  html body[data-theme] .controls .btn { min-height: 36px; padding-block: 6px !important; }
 
   /* 单计时：三行（环节名、数字、进度条），重置按钮放到环节名那一行的右端 */
   .stage-single { container-type: size; }

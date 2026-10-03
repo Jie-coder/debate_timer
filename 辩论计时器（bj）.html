@@ -3375,6 +3375,21 @@ html body[data-theme="terminal"] .brand { flex-shrink: 0; }
 /* 右上角三个按钮不参与收缩，否则窄一点就会被挤出外框 */
 html body[data-theme] .header-actions { flex-shrink: 0; }
 
+/* 底栏的「切换 / 重置」只给手机的双计时页用，其余情况不显示 */
+#btnSwitch,
+#btnResetAll { display: none !important; }
+@media (max-width: 760px), (max-height: 520px), (max-height: 700px) and (max-width: 1100px) and (orientation: landscape) {
+  /* 手机上换环节用顶部导航，底栏三个位置留给：切换 · 开始/暂停 · 重置 */
+  html body[data-screen="duel"] #btnPrev,
+  html body[data-screen="duel"] #btnNext { display: none !important; }
+  html body[data-screen="duel"] #btnSwitch,
+  html body[data-screen="duel"] #btnResetAll { display: inline-flex !important; }
+  /* 面板里各自的小「重置」收起来：整块面板都是切换区，免得手指点到左上角把时间清掉 */
+  html body[data-theme] .stage-duel .duel-reset-btn { display: none !important; }
+  /* 点面板切换发言方时高亮马上跟上，不拖 0.3 秒 */
+  html body[data-theme] .stage-duel .duel-panel { transition-duration: 0.12s; }
+}
+
 /* 平板竖屏：双计时并排时每块面板只有三百多像素宽，数字再加一道宽度上限 */
 @media (min-width: 761px) and (max-width: 1180px) {
   html body[data-theme] .stage-duel .duel-time {
@@ -3391,6 +3406,7 @@ html body[data-theme] .header-actions { flex-shrink: 0; }
   html body[data-theme] .mode-tab { padding-block: 8px !important; }
   html body[data-theme] .timer-action-btn,
   html body[data-theme] .stage-duel .duel-reset-btn { min-height: 40px !important; padding-inline: 16px !important; }
+  html body[data-theme] .controls .btn { min-height: 44px; }
   /* 点面板是切换发言方，长按别选中文字 */
   html body[data-theme] .duel-panel { -webkit-user-select: none; user-select: none; }
   /* iOS 聚焦字号小于 16px 的输入框会自动放大整页 */
@@ -3587,7 +3603,7 @@ html body[data-theme] .header-actions { flex-shrink: 0; }
   html body[data-theme] .flow-label { flex: 0 0 auto; white-space: nowrap; }
   html body[data-theme] .flow-dots { flex-wrap: nowrap !important; max-width: none !important; }
   html body[data-theme] .controls { display: flex !important; flex: 0 0 auto; width: auto; gap: 8px !important; }
-  html body[data-theme] .controls .btn { min-height: 34px; padding-block: 6px !important; }
+  html body[data-theme] .controls .btn { min-height: 36px; padding-block: 6px !important; }
 
   /* 单计时：三行（环节名、数字、进度条），重置按钮放到环节名那一行的右端 */
   .stage-single { container-type: size; }
@@ -3717,11 +3733,24 @@ html body[data-theme] .header-actions { flex-shrink: 0; }
           </svg>
           上一环节
         </button>
+        <button class="btn btn-ghost" id="btnSwitch" title="切换发言方">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M7 4v16M7 4L3 8M7 4l4 4M17 20V4M17 20l-4-4M17 20l4-4"></path>
+          </svg>
+          切换
+        </button>
         <button class="btn btn-primary" id="btnStart">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" id="iconPlay">
             <polygon points="6 4 20 12 6 20 6 4"></polygon>
           </svg>
           <span id="startLabel">开始</span>
+        </button>
+        <button class="btn btn-ghost" id="btnResetAll" title="重置双方">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8"></path>
+            <path d="M3 3v5h5"></path>
+          </svg>
+          重置
         </button>
         <button class="btn btn-ghost" id="btnNext" title="下一环节">
           下一环节
@@ -4407,9 +4436,15 @@ html body[data-theme] .header-actions { flex-shrink: 0; }
     });
   }
 
+  function isTouchDevice() {
+    return typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+  }
+
   function startEditTime(el) {
     if (state.running) return;
     const target = el.dataset.target; // single | pro | con
+    // 触屏上点双计时的数字是开始 / 切换（见 renderDuel），改时间去设置里改环节时长
+    if (target !== 'single' && isTouchDevice()) return;
     const cur = target === 'single' ? state.remaining
               : target === 'pro' ? state.duel.pro : state.duel.con;
     const initial = formatTime(Math.max(0, Math.ceil(cur)));
@@ -4513,20 +4548,18 @@ html body[data-theme] .header-actions { flex-shrink: 0; }
       e.currentTarget.blur(); // 避免之后按空格/回车又触发一次切换
       toggleDuelFlow(curStage());
     });
-    document.getElementById('panelPro').addEventListener('click', (e) => {
-      if (e.target.closest('.duel-reset-btn') || e.target.closest('.editable-time')) return;
+    const onPanelTap = (side) => (e) => {
+      if (e.target.closest('.duel-reset-btn')) return;
+      // 数字占了面板大半：只有「桌面 + 暂停中」点数字才是改时间，
+      // 计时中或触屏上点数字和点面板别处一样（否则手机上经常点了没反应）
+      if (e.target.closest('.editable-time') && !state.running && !isTouchDevice()) return;
       if (curMode() !== 'duel') return;
-      if (!state.running) { state.duel.active = 'pro'; toggleRun(); }
+      if (!state.running) { state.duel.active = side; toggleRun(); }
       else { state.duel.active = state.duel.active === 'pro' ? 'con' : 'pro'; }
       updateDuelActive();
-    });
-    document.getElementById('panelCon').addEventListener('click', (e) => {
-      if (e.target.closest('.duel-reset-btn') || e.target.closest('.editable-time')) return;
-      if (curMode() !== 'duel') return;
-      if (!state.running) { state.duel.active = 'con'; toggleRun(); }
-      else { state.duel.active = state.duel.active === 'pro' ? 'con' : 'pro'; }
-      updateDuelActive();
-    });
+    };
+    document.getElementById('panelPro').addEventListener('click', onPanelTap('pro'));
+    document.getElementById('panelCon').addEventListener('click', onPanelTap('con'));
     document.getElementById('btnResetPro').addEventListener('click', (e) => {
       e.stopPropagation();
       state.duel.pro = curDuration();
@@ -4710,6 +4743,13 @@ html body[data-theme] .header-actions { flex-shrink: 0; }
     if (state.running && !rafId) rafId = requestAnimationFrame(loop);
     updateStartButton();
     if (curMode() === 'duel') updateDuelActive();
+  }
+
+  // 手机底栏的「切换」：只换发言方。计时中换过去接着跑，暂停时不自动开始
+  function switchDuelSide() {
+    if (curMode() !== 'duel') return;
+    state.duel.active = state.duel.active === 'pro' ? 'con' : 'pro';
+    updateDuelActive();
   }
 
   function resetTimer() {
@@ -5329,6 +5369,9 @@ html body[data-theme] .header-actions { flex-shrink: 0; }
     document.getElementById('btnStart').addEventListener('click', toggleRun);
     document.getElementById('btnPrev').addEventListener('click', prevStage);
     document.getElementById('btnNext').addEventListener('click', nextStage);
+    // 这两个只在手机的双计时页显示，顶替上一 / 下一环节（换环节用顶部导航）
+    document.getElementById('btnSwitch').addEventListener('click', switchDuelSide);
+    document.getElementById('btnResetAll').addEventListener('click', resetTimer);
     const topicEl = document.getElementById('topicInput');
     if (topicEl) {
       topicEl.value = state.topic || '';

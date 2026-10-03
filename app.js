@@ -518,9 +518,15 @@
     });
   }
 
+  function isTouchDevice() {
+    return typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+  }
+
   function startEditTime(el) {
     if (state.running) return;
     const target = el.dataset.target; // single | pro | con
+    // 触屏上点双计时的数字是开始 / 切换（见 renderDuel），改时间去设置里改环节时长
+    if (target !== 'single' && isTouchDevice()) return;
     const cur = target === 'single' ? state.remaining
               : target === 'pro' ? state.duel.pro : state.duel.con;
     const initial = formatTime(Math.max(0, Math.ceil(cur)));
@@ -624,20 +630,18 @@
       e.currentTarget.blur(); // 避免之后按空格/回车又触发一次切换
       toggleDuelFlow(curStage());
     });
-    document.getElementById('panelPro').addEventListener('click', (e) => {
-      if (e.target.closest('.duel-reset-btn') || e.target.closest('.editable-time')) return;
+    const onPanelTap = (side) => (e) => {
+      if (e.target.closest('.duel-reset-btn')) return;
+      // 数字占了面板大半：只有「桌面 + 暂停中」点数字才是改时间，
+      // 计时中或触屏上点数字和点面板别处一样（否则手机上经常点了没反应）
+      if (e.target.closest('.editable-time') && !state.running && !isTouchDevice()) return;
       if (curMode() !== 'duel') return;
-      if (!state.running) { state.duel.active = 'pro'; toggleRun(); }
+      if (!state.running) { state.duel.active = side; toggleRun(); }
       else { state.duel.active = state.duel.active === 'pro' ? 'con' : 'pro'; }
       updateDuelActive();
-    });
-    document.getElementById('panelCon').addEventListener('click', (e) => {
-      if (e.target.closest('.duel-reset-btn') || e.target.closest('.editable-time')) return;
-      if (curMode() !== 'duel') return;
-      if (!state.running) { state.duel.active = 'con'; toggleRun(); }
-      else { state.duel.active = state.duel.active === 'pro' ? 'con' : 'pro'; }
-      updateDuelActive();
-    });
+    };
+    document.getElementById('panelPro').addEventListener('click', onPanelTap('pro'));
+    document.getElementById('panelCon').addEventListener('click', onPanelTap('con'));
     document.getElementById('btnResetPro').addEventListener('click', (e) => {
       e.stopPropagation();
       state.duel.pro = curDuration();
@@ -821,6 +825,13 @@
     if (state.running && !rafId) rafId = requestAnimationFrame(loop);
     updateStartButton();
     if (curMode() === 'duel') updateDuelActive();
+  }
+
+  // 手机底栏的「切换」：只换发言方。计时中换过去接着跑，暂停时不自动开始
+  function switchDuelSide() {
+    if (curMode() !== 'duel') return;
+    state.duel.active = state.duel.active === 'pro' ? 'con' : 'pro';
+    updateDuelActive();
   }
 
   function resetTimer() {
@@ -1440,6 +1451,9 @@
     document.getElementById('btnStart').addEventListener('click', toggleRun);
     document.getElementById('btnPrev').addEventListener('click', prevStage);
     document.getElementById('btnNext').addEventListener('click', nextStage);
+    // 这两个只在手机的双计时页显示，顶替上一 / 下一环节（换环节用顶部导航）
+    document.getElementById('btnSwitch').addEventListener('click', switchDuelSide);
+    document.getElementById('btnResetAll').addEventListener('click', resetTimer);
     const topicEl = document.getElementById('topicInput');
     if (topicEl) {
       topicEl.value = state.topic || '';
