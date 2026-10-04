@@ -2590,7 +2590,7 @@ html body[data-theme="arena"] .cover-vs { font-family: var(--lk-num) !important;
 /* 首页卡片随可用高度收缩，底边不再被裁掉 */
 html body[data-theme="arena"] .cover-page { min-height: 0 !important; height: 100% !important; }
 
-/* 2 · 学院典雅 Academy — 象牙纸底、宋体标题、酒红 + 藏青、金色细线，正式赛事感 */
+/* 2 · 学院典雅 Academy — 象牙纸底、宋体标题、酒红 + 藏青、金色点缀；圆角卡片 + 柔和投影，不用双线边框 */
 html body[data-theme="academy"] {
   --vf-paper: #f6f1e7;
   --vf-paper-soft: #fbf8f1;
@@ -2611,11 +2611,12 @@ html body[data-theme="academy"] {
   background: #ece4d4 !important;
   font-family: var(--lk-serif) !important;
 }
+/* 外框：大圆角纸面浮在底色上，靠投影分层（全局有 * { box-shadow: none !important }，这里要带 !important） */
 html body[data-theme="academy"] .app {
-  border: 1px solid var(--lk-gold) !important;
-  outline: 1px solid var(--lk-gold);
-  outline-offset: -8px;
+  border: 1px solid rgba(176, 141, 87, 0.28) !important;
+  border-radius: clamp(18px, 2.4vw, 30px);
   background: var(--vf-paper) !important;
+  box-shadow: 0 22px 60px rgba(96, 72, 36, 0.14), 0 2px 6px rgba(96, 72, 36, 0.08) !important;
 }
 
 /* brand：改成中文书名式题签 */
@@ -2639,14 +2640,14 @@ html body[data-theme="academy"] .brand-mark::after {
 html body[data-theme="academy"] .brand::before, html body[data-theme="academy"] .brand::after { background: transparent !important; }
 html body[data-theme="academy"] .brand-topic { color: var(--vf-muted) !important; font-family: var(--lk-serif) !important; font-style: italic !important; }
 
-/* 环节导航：酒红色块 + 金线分隔 */
-html body[data-theme="academy"] .mode-tabs { border-bottom: 1px solid var(--vf-line) !important; padding-bottom: 8px !important; column-gap: 6px !important; }
+/* 环节导航：酒红胶囊标出当前环节 */
+html body[data-theme="academy"] .mode-tabs { column-gap: 4px !important; }
 html body[data-theme="academy"] .mode-tab {
   font-family: var(--lk-serif) !important;
   font-weight: 500 !important;
   color: var(--vf-muted) !important;
-  border-radius: 2px !important;
-  padding: 6px 14px !important;
+  border-radius: 999px !important;
+  padding: 6px 16px !important;
 }
 html body[data-theme="academy"] .mode-tab:hover { background: #efe6d4 !important; color: var(--vf-ink) !important; }
 html body[data-theme="academy"] .mode-tab.active {
@@ -2686,9 +2687,9 @@ html body[data-theme="academy"] .progress-fill { background: var(--lk-con) !impo
 /* 按钮 */
 html body[data-theme="academy"] .btn, html body[data-theme="academy"] .timer-action-btn {
   font-family: var(--lk-serif) !important;
-  border: 1px solid var(--lk-gold) !important;
-  border-radius: 2px !important;
-  padding: 6px 18px !important;
+  border: 1px solid rgba(176, 141, 87, 0.7) !important;
+  border-radius: 999px !important;
+  padding: 7px 20px !important;
   color: var(--vf-ink) !important;
   background: transparent !important;
 }
@@ -2704,13 +2705,23 @@ html body[data-theme="academy"] .flow-dot.done { background: var(--lk-gold) !imp
 html body[data-theme="academy"] .flow-dot.current { background: var(--lk-con) !important; border-color: var(--lk-con) !important; }
 
 /* 双计时：藏青 vs 酒红 */
-html body[data-theme="academy"] .duel { border-top: 2px solid var(--vf-ink) !important; border-bottom: 2px solid var(--vf-ink) !important; }
-html body[data-theme="academy"] .duel-panel { background: transparent !important; }
-html body[data-theme="academy"] .duel-panel[data-side="pro"] { border-right: 1px solid var(--vf-line) !important; }
+/* 两块圆角卡片：当前发言方是亮面 + 本方颜色描边 + 投影，另一方只留一圈淡线 */
+html body[data-theme="academy"] .duel { border: 0 !important; gap: 18px !important; }
+html body[data-theme="academy"] .duel-panel {
+  border: 1px solid rgba(176, 141, 87, 0.35) !important;
+  border-radius: clamp(16px, 2vw, 26px) !important;
+  background: transparent !important;
+}
 html body[data-theme="academy"] .duel-panel.active { background: #fffdf8 !important; }
-html body[data-theme="academy"] .duel-panel.active[data-side="pro"] { box-shadow: inset 0 5px 0 var(--lk-pro) !important; }
-html body[data-theme="academy"] .duel-panel.active[data-side="con"] { box-shadow: inset 0 5px 0 var(--lk-con) !important; }
-html body[data-theme="academy"] .duel-panel.inactive { opacity: 0.5 !important; }
+html body[data-theme="academy"] .duel-panel.active[data-side="pro"] {
+  border-color: var(--lk-pro) !important;
+  box-shadow: 0 0 0 1px var(--lk-pro), 0 16px 40px rgba(31, 58, 104, 0.14) !important;
+}
+html body[data-theme="academy"] .duel-panel.active[data-side="con"] {
+  border-color: var(--lk-con) !important;
+  box-shadow: 0 0 0 1px var(--lk-con), 0 16px 40px rgba(122, 31, 43, 0.14) !important;
+}
+html body[data-theme="academy"] .duel-panel.inactive { opacity: 0.55 !important; }
 html body[data-theme="academy"] .duel-side-label, html body[data-theme="academy"] .duel-status { font-family: var(--lk-serif) !important; color: var(--vf-muted) !important; }
 html body[data-theme="academy"] .duel-side-name { font-family: var(--lk-serif) !important; font-weight: 800 !important; letter-spacing: 0.4em !important; }
 html body[data-theme="academy"] .duel-panel[data-side="pro"] .duel-side-name { color: var(--lk-pro) !important; }
@@ -2723,7 +2734,7 @@ html body[data-theme="academy"] .duel-divider {
   width: 60px !important; height: 60px !important;
   background: var(--vf-paper) !important;
   border: 1px solid var(--lk-gold) !important;
-  outline: 1px solid var(--lk-gold); outline-offset: 3px;
+  box-shadow: 0 6px 18px rgba(96, 72, 36, 0.16) !important;
   color: var(--lk-con) !important;
   font-family: var(--lk-serif) !important;
   font-weight: 800 !important;
@@ -2731,25 +2742,111 @@ html body[data-theme="academy"] .duel-divider {
 }
 html body[data-theme="academy"] .duel-divider:hover { background: var(--lk-con) !important; color: #fbf6ea !important; }
 
-/* 首页：象牙底 + 金框，像赛事海报 */
+/* 首页：象牙色圆角卡片，像一张赛事请柬 */
 html body[data-theme="academy"] .cover-page {
   --cover-bg: #fffdf8;
   --cover-fg: var(--vf-ink);
   --cover-pro: var(--lk-pro);
   --cover-con: var(--lk-con);
-  border-radius: 0 !important;
-  border: 1px solid var(--lk-gold);
-  outline: 1px solid var(--lk-gold);
-  outline-offset: -10px;
+  position: relative;
+  overflow: hidden;
+  border-radius: clamp(18px, 2.2vw, 28px) !important;
+  border: 1px solid rgba(176, 141, 87, 0.38);
+  /* 比外面的纸面亮一档、顶部最亮；换了自定义背景图时这层会被透明背景规则盖掉 */
+  background: radial-gradient(90% 80% at 50% 0%, #fffefb 0%, #fdf9f0 62%, #faf4e7 100%);
+  box-shadow: 0 8px 18px rgba(96, 72, 36, 0.1) !important;
+}
+/* 首页所在的滚动容器会裁掉卡片的投影：四周留够投影的范围，否则会露出一条生硬的边 */
+html body[data-theme="academy"] .stage-cover { padding: 8px 20px 28px; }
+/* 辩题按内容定高：只有一行时不再空出第二行，标题和装饰线挨得紧凑 */
+@supports (field-sizing: content) {
+  html body[data-theme="academy"] .cover-topic-input { field-sizing: content; height: auto; min-height: 0 !important; max-height: 2.3em; }
+}
+/* 比赛名上方三枚小菱形，和底栏的环节菱形呼应 */
+html body[data-theme="academy"] .cover-kicker::before {
+  content: "◆  ◆  ◆";
+  margin-bottom: 12px;
+  color: var(--lk-gold);
+  font-size: 8px;
+  letter-spacing: 0.9em !important;
+  white-space: pre;
+  opacity: 0.85;
 }
 html body[data-theme="academy"] .cover-match-input { font-family: var(--lk-serif) !important; color: var(--lk-gold) !important; letter-spacing: 0.4em !important; }
 html body[data-theme="academy"] .cover-topic-input { font-family: var(--lk-serif) !important; font-weight: 900 !important; color: var(--vf-ink) !important; }
-html body[data-theme="academy"] .cover-title-rule { background: var(--lk-gold) !important; height: 2px !important; width: 220px !important; border-radius: 0 !important; }
-html body[data-theme="academy"] .cover-team-tag { font-family: var(--lk-serif) !important; border-radius: 0 !important; letter-spacing: 0.5em !important; padding: 6px 12px 6px 20px !important; }
+/* 辩题下的装饰线：两头淡出的金线，中间一枚酒红菱形 */
+html body[data-theme="academy"] .cover-title-rule {
+  position: relative;
+  width: min(380px, 62%) !important;
+  height: 1px !important;
+  border-radius: 0 !important;
+  background: linear-gradient(90deg, transparent, var(--lk-gold) 22%, var(--lk-gold) 78%, transparent) !important;
+}
+html body[data-theme="academy"] .cover-title-rule::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  background: var(--lk-con);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+/* 正反方各一块圆角牌子，带本方颜色的淡底和描边 */
+html body[data-theme="academy"] .cover-matchup { align-items: stretch !important; }
+html body[data-theme="academy"] .cover-team {
+  align-content: center;
+  padding: clamp(14px, 2.4vh, 26px) clamp(14px, 1.8vw, 28px);
+  border: 1px solid transparent;
+  border-radius: clamp(14px, 1.6vw, 22px);
+}
+html body[data-theme="academy"] .cover-team-pro {
+  border-color: rgba(31, 58, 104, 0.18);
+  background: linear-gradient(180deg, rgba(31, 58, 104, 0.08), rgba(31, 58, 104, 0.02));
+}
+html body[data-theme="academy"] .cover-team-con {
+  border-color: rgba(122, 31, 43, 0.18);
+  background: linear-gradient(180deg, rgba(122, 31, 43, 0.08), rgba(122, 31, 43, 0.02));
+}
+/* 自定义背景图上牌子垫一层纸色，队名才看得清 */
+html body[data-theme="academy"].has-custom-background .cover-team { background: rgba(255, 253, 248, 0.78); }
+html body[data-theme="academy"] .cover-team-tag { font-family: var(--lk-serif) !important; border-radius: 999px !important; letter-spacing: 0.5em !important; padding: 6px 14px 6px 22px !important; }
 html body[data-theme="academy"] .cover-team-pro .cover-team-tag { background: var(--lk-pro); color: #fbf6ea !important; border-color: var(--lk-pro) !important; }
 html body[data-theme="academy"] .cover-team-con .cover-team-tag { background: var(--lk-con); color: #fbf6ea !important; border-color: var(--lk-con) !important; }
 html body[data-theme="academy"] .cover-team-name { font-family: var(--lk-serif) !important; font-weight: 800 !important; }
-html body[data-theme="academy"] .cover-vs { font-family: var(--lk-num) !important; font-style: italic !important; color: var(--lk-gold) !important; font-size: 44px !important; font-weight: 400 !important; }
+/* VS：金边圆形徽章 */
+html body[data-theme="academy"] .cover-vs {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border: 1px solid var(--lk-gold);
+  border-radius: 50%;
+  background: #fffdf8;
+  box-shadow: 0 6px 18px rgba(96, 72, 36, 0.14) !important;
+  font-family: var(--lk-num) !important;
+  font-style: italic !important;
+  font-weight: 400 !important;
+  font-size: 24px !important;
+  color: var(--lk-gold) !important;
+}
+
+/* 设置抽屉、全部环节面板跟着用圆角（基础样式里这些是直角） */
+html body[data-theme="academy"] .stage-panel { border-radius: 18px; }
+html body[data-theme="academy"] .drawer .chip,
+html body[data-theme="academy"] .drawer .preset-new-btn { border-radius: 999px !important; }
+html body[data-theme="academy"] .drawer .input,
+html body[data-theme="academy"] .drawer .stage-row,
+html body[data-theme="academy"] .drawer .preset-item,
+html body[data-theme="academy"] .drawer .background-preview { border-radius: 12px !important; }
+html body[data-theme="academy"] .drawer .stage-type-pill,
+html body[data-theme="academy"] .drawer .stage-flow-pill,
+html body[data-theme="academy"] .drawer .stage-dur-input,
+html body[data-theme="academy"] .drawer .stage-name-input { border-radius: 8px !important; }
+html body[data-theme="academy"] .switch { border-radius: 999px !important; }
+html body[data-theme="academy"] .switch::after { border-radius: 50% !important; }
+html body[data-theme="academy"] .single-time.editing,
+html body[data-theme="academy"] .duel-time.editing { border-radius: 14px !important; }
 
 /* 首页卡片随可用高度收缩，底边不再被裁掉 */
 html body[data-theme="academy"] .cover-page { min-height: 0 !important; height: 100% !important; }
@@ -3428,7 +3525,6 @@ html body[data-theme] .mode-more[aria-expanded="true"] { background: var(--vf-pa
   transform: none;
   transition-delay: 0s;
 }
-html body[data-theme="academy"] .stage-panel,
 html body[data-theme="broadcast"] .stage-panel,
 html body[data-theme="terminal"] .stage-panel { border-radius: 0; }
 .stage-panel-title {
@@ -3564,6 +3660,14 @@ html body[data-theme] .header-actions { flex-shrink: 0; }
   html body[data-theme="soft"] .cover-team { padding: 12px 14px !important; }
   html body[data-theme] .cover-vs { font-size: 22px !important; }
   html body[data-theme="soft"] .cover-vs { width: 44px !important; height: 44px !important; font-size: 15px !important; }
+  html body[data-theme="academy"] .cover-vs { width: 46px; height: 46px; font-size: 17px !important; justify-self: center; }
+  html body[data-theme="academy"] .stage-cover { padding: 4px 6px 16px; }
+  html body[data-theme="academy"] .cover-team { padding: 10px 14px; gap: 8px; }
+}
+/* 小屏手机（高度不到 700）：典雅首页再收一点，三枚小菱形不显示，整页不用滑动 */
+@media (max-width: 760px) and (max-height: 700px) {
+  html body[data-theme="academy"] .cover-kicker::before { display: none; }
+  html body[data-theme="academy"] .cover-vs { width: 38px; height: 38px; font-size: 14px !important; }
 }
 
 /* 手机上的首页：单列不被内容撑宽（电视转播的比赛名横幅会），实在放不下时可以上下滑动 */
@@ -3592,6 +3696,7 @@ html body[data-theme] .header-actions { flex-shrink: 0; }
     grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) !important;
   }
   html body[data-theme="arena"] .stage-duel .duel,
+  html body[data-theme="academy"] .stage-duel .duel,
   html body[data-theme="soft"] .stage-duel .duel,
   html body[data-theme="terminal"] .stage-duel .duel { gap: 10px !important; }
   html body[data-theme] .stage-duel .duel-time {
@@ -3753,6 +3858,10 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
   html body[data-theme] .cover-team-name { font-size: clamp(16px, 6.5vh, 28px); }
   html body[data-theme] .cover-vs { font-size: 22px !important; }
   html body[data-theme="soft"] .cover-vs { width: 40px !important; height: 40px !important; font-size: 14px !important; }
+  html body[data-theme="academy"] .cover-vs { width: 40px; height: 40px; font-size: 15px !important; align-self: center; }
+  html body[data-theme="academy"] .cover-team { padding: 8px 14px; }
+  html body[data-theme="academy"] .cover-kicker::before { display: none; }
+  html body[data-theme="academy"] .stage-cover { padding: 2px 10px 12px; }
 }
 
 /* 辩题输入框跟着内容长高（一行就一行），不支持的浏览器用上面的固定两行高 */
@@ -4937,6 +5046,9 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
       tabs.innerHTML = '';
       buttons = state.stages.map(s => {
         const b = document.createElement('button');
+        // 先带上样式类再插入：否则会从浏览器默认按钮样式过渡到 .mode-tab，
+        // 0.2 秒内量到的宽度是错的，滚动位置也跟着算错
+        b.className = 'mode-tab';
         b.dataset.id = s.id;
         tabs.appendChild(b);
         return b;

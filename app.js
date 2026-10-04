@@ -922,6 +922,9 @@
       tabs.innerHTML = '';
       buttons = state.stages.map(s => {
         const b = document.createElement('button');
+        // 先带上样式类再插入：否则会从浏览器默认按钮样式过渡到 .mode-tab，
+        // 0.2 秒内量到的宽度是错的，滚动位置也跟着算错
+        b.className = 'mode-tab';
         b.dataset.id = s.id;
         tabs.appendChild(b);
         return b;
