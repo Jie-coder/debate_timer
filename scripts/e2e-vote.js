@@ -106,6 +106,22 @@ async function main() {
     console.log('PASS  三个独立观众标签页都连接上了房间 ' + room);
     passCount++;
 
+    // ---------- 频道分流：观众只订阅控制频道，从不订阅投票频道 ----------
+    const hostChannels = await host.evaluate(() => ({
+      vote: window.__voteHostChannelsForTest && window.__voteHostChannelsForTest.vote && window.__voteHostChannelsForTest.vote.state,
+      ctl: window.__voteHostChannelsForTest && window.__voteHostChannelsForTest.ctl && window.__voteHostChannelsForTest.ctl.state,
+    }));
+    assert(hostChannels.vote === 'joined' && hostChannels.ctl === 'joined', '主持端同时订阅了投票频道和控制频道', hostChannels);
+
+    for (let i = 0; i < voters.length; i++) {
+      const chans = await voters[i].evaluate(() => ({
+        vote: window.__voteChannelsForTest && window.__voteChannelsForTest.vote && window.__voteChannelsForTest.vote.state,
+        ctl: window.__voteChannelsForTest && window.__voteChannelsForTest.ctl && window.__voteChannelsForTest.ctl.state,
+      }));
+      assert(chans.vote !== 'joined', '观众 #' + (i + 1) + ' 的投票频道从未订阅（不会收到其他观众的票）', chans);
+      assert(chans.ctl === 'joined', '观众 #' + (i + 1) + ' 只订阅了控制频道', chans);
+    }
+
     // track expected per-voter side so we can compute expected tallies locally
     const mySide = [null, null, null];
     function expectedCounts() {
@@ -129,6 +145,14 @@ async function main() {
     await vote(1, 'pro');
     await vote(2, 'con');
     await waitHostCounts('三票计数正确（2 正方 / 1 反方）');
+
+    // 投完票之后再查一次：观众发票不订阅、不建立 WebSocket 连接，所以就算
+    // 其他观众密集改票，自己的投票频道也始终不会变成 joined —— 这就是
+    // "观众收不到其他人投票广播" 的根本原因（从来没有订阅那条频道）。
+    for (let i = 0; i < voters.length; i++) {
+      const voteState = await voters[i].evaluate(() => window.__voteChannelsForTest.vote.state);
+      assert(voteState !== 'joined', '观众 #' + (i + 1) + ' 投票后，投票频道仍未订阅（结构上收不到别人的票）', voteState);
+    }
 
     // ---------- 2) switching side overwrites, not double-counts ----------
     await vote(0, 'con'); // voter 0: pro -> con

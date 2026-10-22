@@ -224,20 +224,56 @@
     }
 
     var client = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
-    var channelName = 'room-' + room;
-    var channel = null;
-    var backoff = 1000;
     var BACKOFF_MAX = 15000;
-    var reconnectTimer = null;
     var destroyed = false;
 
+    /* 投票频道 room-<room>：只用来发票，从不订阅（不建立 Realtime 订阅），
+     * 用 httpSend()（新版 supabase-js 走纯 REST 广播）或者在未订阅状态下调用
+     * send()（会自动走同一个 REST 广播接口）。这样观众之间互不可见对方的票，
+     * 也不会把票广播给所有在线观众，人多时省消息配额。 */
+    var voteChannel = client.channel('room-' + room);
+
+    /* 控制频道 room-<room>-ctl：观众唯一真正订阅的频道，只收主持端的
+     * open / closed / sync。 */
+    var ctlChannel = null;
+    var ctlBackoff = 1000;
+    var ctlReconnectTimer = null;
+
+    var voteRetryTimer = null;
+    var voteRetryBackoff = 1000;
+
+    function sendBroadcast(ch, payload) {
+      if (!ch) return Promise.resolve('error');
+      try {
+        if (typeof ch.httpSend === 'function') {
+          return ch.httpSend('msg', payload).then(
+            function (res) { return (res && res.success) ? 'ok' : 'error'; },
+            function () { return 'error'; }
+          );
+        }
+        return Promise.resolve(ch.send({ type: 'broadcast', event: 'msg', payload: payload }));
+      } catch (e) {
+        return Promise.resolve('error');
+      }
+    }
+
     function sendVote() {
-      if (!mySide || !channel) return;
-      channel.send({
-        type: 'broadcast',
-        event: 'msg',
-        payload: { type: 'vote', voter_id: voterId, side: mySide, ts: Date.now() },
+      if (!mySide) return;
+      if (voteRetryTimer) { clearTimeout(voteRetryTimer); voteRetryTimer = null; }
+      var payload = { type: 'vote', voter_id: voterId, side: mySide, ts: Date.now() };
+      sendBroadcast(voteChannel, payload).then(function (status) {
+        if (status === 'ok') { voteRetryBackoff = 1000; return; }
+        scheduleVoteRetry();
       });
+    }
+
+    function scheduleVoteRetry() {
+      if (voteRetryTimer || destroyed) return;
+      voteRetryTimer = setTimeout(function () {
+        voteRetryTimer = null;
+        voteRetryBackoff = Math.min(voteRetryBackoff * 2, BACKOFF_MAX);
+        sendVote();
+      }, voteRetryBackoff);
     }
 
     function handlePayload(payload) {
@@ -247,35 +283,36 @@
       else if (payload.type === 'open') applyClosed(false);
     }
 
-    function scheduleReconnect() {
-      if (reconnectTimer || destroyed) return;
-      reconnectTimer = setTimeout(function () {
-        reconnectTimer = null;
-        backoff = Math.min(backoff * 2, BACKOFF_MAX);
-        connect();
-      }, backoff);
+    function scheduleCtlReconnect() {
+      if (ctlReconnectTimer || destroyed) return;
+      ctlReconnectTimer = setTimeout(function () {
+        ctlReconnectTimer = null;
+        ctlBackoff = Math.min(ctlBackoff * 2, BACKOFF_MAX);
+        connectCtl();
+      }, ctlBackoff);
     }
 
-    function connect() {
+    function connectCtl() {
       if (destroyed) return;
-      if (channel) {
-        try { client.removeChannel(channel); } catch (e) {}
-        channel = null;
+      if (ctlChannel) {
+        try { client.removeChannel(ctlChannel); } catch (e) {}
+        ctlChannel = null;
       }
       setStatus('连接中…', 'pending');
-      var ch = client.channel(channelName);
+      var ch = client.channel('room-' + room + '-ctl');
       ch.on('broadcast', { event: 'msg' }, function (msg) { handlePayload(msg && msg.payload); });
       ch.subscribe(function (status) {
         if (destroyed) return;
         if (status === 'SUBSCRIBED') {
-          channel = ch;
-          backoff = 1000;
+          ctlChannel = ch;
+          ctlBackoff = 1000;
           setStatus('已连接', 'ok');
+          // 刚连上（包括重连）：重发一次自己当前的票，不用等主持端的 sync
           sendVote();
         } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          if (channel === ch) channel = null;
+          if (ctlChannel === ch) ctlChannel = null;
           setStatus('连接中断，重试中…', 'bad');
-          scheduleReconnect();
+          scheduleCtlReconnect();
         }
       });
     }
@@ -292,15 +329,18 @@
     btnCon.addEventListener('click', function () { chooseSide('con'); });
 
     document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'visible' && !destroyed && !channel) {
-        if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
-        backoff = 1000;
-        connect();
+      if (document.visibilityState === 'visible' && !destroyed && !ctlChannel) {
+        if (ctlReconnectTimer) { clearTimeout(ctlReconnectTimer); ctlReconnectTimer = null; }
+        ctlBackoff = 1000;
+        connectCtl();
       }
     });
     window.addEventListener('beforeunload', function () { destroyed = true; });
 
-    connect();
+    // 仅供 e2e 测试读取频道订阅状态：验证投票频道从不订阅、控制频道才订阅
+    window.__voteChannelsForTest = { get vote() { return voteChannel; }, get ctl() { return ctlChannel; } };
+
+    connectCtl();
   })();
   </script>
 </body>

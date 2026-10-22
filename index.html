@@ -64,6 +64,15 @@
 
     <!-- Main -->
     <main>
+      <!-- 票数条：插在辩题和计时数字之间的空白处，首页和未开票时不显示 -->
+      <div class="vote-ratio-bar" id="voteRatioBar" hidden aria-live="polite">
+        <span class="vrb-count vrb-pro" id="vrbPro"></span>
+        <div class="vrb-track" id="vrbTrack">
+          <div class="vrb-fill vrb-fill-pro" id="vrbFillPro"></div>
+          <div class="vrb-fill vrb-fill-con" id="vrbFillCon"></div>
+        </div>
+        <span class="vrb-count vrb-con" id="vrbCon"></span>
+      </div>
       <div class="stage" id="stage"></div>
     </main>
 
@@ -265,13 +274,6 @@
 
   <div class="flash" id="flash"></div>
 
-  <!-- 票数条：在单 / 双计时页顶一条不打扰布局的小条，首页和未开票时不显示 -->
-  <div class="vote-ratio-bar" id="voteRatioBar" hidden aria-live="polite">
-    <span class="vrb-side vrb-pro" id="vrbPro"></span>
-    <span class="vrb-sep">/</span>
-    <span class="vrb-side vrb-con" id="vrbCon"></span>
-  </div>
-
   <!-- Vote panel -->
   <div class="overlay" id="voteOverlay"></div>
   <aside class="drawer vote-drawer" id="votePanel">
@@ -304,6 +306,7 @@
       </div>
       <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
         <button class="chip" id="voteCopyLink" type="button">复制链接</button>
+        <button class="chip" id="voteQrFullscreenBtn" type="button">全屏二维码</button>
         <button class="chip" id="voteNewRoom" type="button">新建房间</button>
       </div>
     </div>
@@ -348,5 +351,13 @@
       <div id="voteHistoryList" class="preset-list"></div>
     </div>
   </aside>
+
+  <!-- 二维码全屏展示：投给全场观众看，点任意位置或 Esc 退出 -->
+  <div class="vote-qr-fullscreen" id="voteQrFullscreen" hidden>
+    <div class="vqf-room" id="vqfRoom"></div>
+    <div class="vqf-qr" id="vqfQr"></div>
+    <div class="vqf-url" id="vqfUrl"></div>
+    <div class="vqf-hint">点击任意位置或按 Esc 退出</div>
+  </div>
 </body>
 </html>

@@ -15,6 +15,14 @@
     --tweak-质询: 90;
     --tweak-对辩: 120;
     /*EDITMODE-END*/
+    --vote-bar-reserve: 0px;
+  }
+
+  /* 票数条显示时，双计时的高度公式（下面 .duel 规则）要让出这部分空间，
+     单计时页也要把 main 顶部内边距让出同样的量，否则矮屏幕 / 宽屏下数字区域
+     会被挤到和票数条重叠（票数条实测高度 + 下间距约 50～55px，留一点余量）。 */
+  body:has(.vote-ratio-bar:not([hidden])) {
+    --vote-bar-reserve: 64px;
   }
 
   /* Warm theme (default) */
@@ -1327,6 +1335,12 @@ main {
   min-width: 0;
 }
 
+/* 票数条显示时，它基本占满原来 main 顶部内边距留出的空当，所以把顶部内边距
+   让出来给它，而不是在原有内边距之外再加高度——避免把计时内容往下挤出可用区域 */
+body:has(.vote-ratio-bar:not([hidden])) main {
+  padding-top: max(0px, clamp(18px, 4vw, 48px) - var(--vote-bar-reserve, 0px)) !important;
+}
+
 .stage,
 .single-timer {
   min-height: 0;
@@ -1338,6 +1352,24 @@ main {
   justify-content: center !important;
   gap: clamp(14px, 2.2vh, 26px) !important;
   padding: 0 !important;
+}
+
+/* 票数条显示时，单计时的数字本身不缩（保持大尺寸），但让周围的间距和按钮边距
+   更紧凑一点，把票数条占掉的高度让出来，避免矮屏幕下数字区域被挤出可用区域 */
+body:has(.vote-ratio-bar:not([hidden])) .stage-single .single-timer {
+  gap: clamp(4px, 1vh, 14px) !important;
+}
+body:has(.vote-ratio-bar:not([hidden])) .stage-single .timer-actions {
+  margin-top: clamp(2px, 0.6vh, 8px) !important;
+}
+body:has(.vote-ratio-bar:not([hidden])) .stage-single .progress-wrap {
+  gap: clamp(4px, 0.8vh, 10px) !important;
+}
+/* 宽屏 + 矮视口（比如 1440×768）时数字本来就顶格，票数条再占一截空间会把
+   数字挤出可用区域；按视口高度多封一个上限，只在票数条显示时生效，
+   不影响不开投票时的默认大小 */
+body:has(.vote-ratio-bar:not([hidden])) .stage-single .single-time {
+  font-size: clamp(76px, 13vw, min(174px, 21vh)) !important;
 }
 
 .single-label {
@@ -1501,7 +1533,7 @@ footer {
   flex: 0 1 auto !important;
   min-height: 0;
   width: min(100%, 1760px) !important;
-  height: min(680px, 70vh, calc(100vh - 190px)) !important;
+  height: min(680px, calc(70vh - var(--vote-bar-reserve)), calc(100vh - 190px - var(--vote-bar-reserve))) !important;
   margin: auto !important;
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -3552,15 +3584,22 @@ html body[data-theme="neo"] .drawer .background-preview { border-radius: 2px !im
 
 /* 票数条 + 投票结果：黑边 + 硬投影，正方蓝 / 反方粉一眼分清 */
 html body[data-theme="neo"] .vote-ratio-bar {
-  border: 2px solid #000 !important;
+  border: 3px solid #000 !important;
   border-radius: 2px !important;
   background: #fff !important;
   box-shadow: var(--lk-shadow) !important;
-  opacity: 1 !important;
   font-weight: 700 !important;
 }
-html body[data-theme="neo"] .vrb-pro { color: var(--lk-pro) !important; font-weight: 800 !important; }
-html body[data-theme="neo"] .vrb-con { color: var(--lk-con) !important; font-weight: 800 !important; }
+html body[data-theme="neo"] .vrb-count { font-weight: 900 !important; }
+html body[data-theme="neo"] .vrb-pro { color: var(--lk-pro) !important; }
+html body[data-theme="neo"] .vrb-con { color: var(--lk-con) !important; }
+html body[data-theme="neo"] .vrb-track {
+  border: 2px solid #000 !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+}
+html body[data-theme="neo"] .vrb-fill-pro { background: var(--lk-pro) !important; }
+html body[data-theme="neo"] .vrb-fill-con { background: var(--lk-con) !important; }
 html body[data-theme="neo"] .vote-qr-wrap { border: 2px solid #000 !important; border-radius: 2px !important; }
 html body[data-theme="neo"] .vote-result-cell {
   border: 2px solid #000 !important;
@@ -3571,6 +3610,23 @@ html body[data-theme="neo"] .vote-result-cell {
 html body[data-theme="neo"] .vote-result-cell:nth-child(1) { box-shadow: var(--lk-shadow), inset 4px 0 0 var(--lk-pro) !important; }
 html body[data-theme="neo"] .vote-result-cell:nth-child(2) { box-shadow: var(--lk-shadow), inset 4px 0 0 var(--lk-con) !important; }
 html body[data-theme="neo"] .vote-result-cell .vrc-value { font-weight: 900 !important; }
+
+/* 二维码全屏：黄底黑边，呼应整体 Neo-Brutalism 风格 */
+html body[data-theme="neo"] .vote-qr-fullscreen { background: var(--vf-paper) !important; }
+html body[data-theme="neo"] .vqf-room {
+  background: var(--lk-hi) !important;
+  color: #000 !important;
+  border: 3px solid #000 !important;
+  border-radius: 2px !important;
+  padding: 6px 22px !important;
+  font-weight: 900 !important;
+}
+html body[data-theme="neo"] .vqf-qr {
+  border: 4px solid #000 !important;
+  border-radius: 2px !important;
+  box-shadow: var(--lk-shadow-lg) !important;
+}
+html body[data-theme="neo"] .vqf-url { font-weight: 700 !important; }
 
 /* 主题有六个：标签单独一行，色卡自动换行，文字不折断 */
 .field-row:has(#themeGroup) { flex-direction: column !important; align-items: flex-start !important; gap: 10px !important; }
@@ -4104,37 +4160,97 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
 }
 
 /* ========== 现场投票 ========== */
-/* 票数条固定在视口边缘，落在 body 外边距里（body 的 padding 比票数条还高），
-   所以不管哪个主题、哪个断点，都不会盖住 .app 里的单 / 双计时内容。 */
+/* 票数条：插在 main 里，紧跟在辩题下方、计时数字上方的空白处，跟着正常排版流走，
+   不用 fixed，不会盖住任何数字 / 标签 / 进度条 / 按钮。字号比旧版的底部小胶囊大得多，
+   投影到大屏上也能看清。 */
 .vote-ratio-bar {
-  position: fixed;
-  left: 50%;
-  bottom: 1px;
-  transform: translateX(-50%);
-  z-index: 45;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
-  gap: 8px;
-  max-width: calc(100% - 16px);
-  padding: 1px 12px;
-  border-radius: 999px;
+  gap: clamp(10px, 2vw, 20px);
+  width: 100%;
+  max-width: min(760px, 92%);
+  margin: 0 auto clamp(8px, 1.6vh, 16px);
+  padding: clamp(6px, 1vh, 10px) clamp(14px, 2.4vw, 22px);
+  border-radius: 12px;
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--ink-2);
   font-family: "JetBrains Mono", monospace;
-  font-size: 10px;
-  line-height: 1.15;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  pointer-events: none;
-  opacity: 0.92;
 }
 .vote-ratio-bar[hidden] { display: none; }
 body[data-screen="cover"] .vote-ratio-bar { display: none !important; }
-.vrb-side { color: var(--ink); }
-.vrb-delta { color: var(--ink-3); margin-left: 2px; }
-.vrb-sep { color: var(--ink-3); }
+.vrb-count {
+  flex: 0 0 auto;
+  font-weight: 800;
+  font-size: clamp(15px, 2.1vw, 25px);
+  line-height: 1.15;
+  white-space: nowrap;
+}
+.vrb-pro { color: var(--accent); }
+.vrb-con { color: var(--warn); }
+.vrb-track {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 48px;
+  height: clamp(9px, 1.5vh, 15px);
+  border-radius: 999px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.vrb-fill { height: 100%; transition: width 0.25s ease; }
+.vrb-fill-pro { background: var(--accent); }
+.vrb-fill-con { background: var(--warn); }
+
+/* 二维码全屏展示：投给全场看，盖住一切（包括设置抽屉），点哪都能退出 */
+.vote-qr-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(16px, 3vh, 32px);
+  background: var(--bg);
+  color: var(--ink);
+  cursor: pointer;
+  padding: 24px;
+}
+.vote-qr-fullscreen[hidden] { display: none; }
+.vqf-room {
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 800;
+  font-size: clamp(26px, 5vw, 56px);
+  letter-spacing: 0.1em;
+}
+.vqf-qr {
+  background: #fff;
+  padding: clamp(14px, 2vw, 28px);
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.vqf-qr svg, .vqf-qr img, .vqf-qr table {
+  width: min(62vw, 62vh);
+  height: min(62vw, 62vh);
+  display: block;
+}
+.vqf-url {
+  font-family: "JetBrains Mono", monospace;
+  font-size: clamp(14px, 2.2vw, 24px);
+  color: var(--ink-2);
+  word-break: break-all;
+  max-width: 90vw;
+  text-align: center;
+}
+.vqf-hint {
+  font-size: clamp(12px, 1.4vw, 16px);
+  color: var(--ink-3);
+}
 
 .vote-drawer .vote-room-code {
   font-family: "JetBrains Mono", monospace;
@@ -4270,6 +4386,15 @@ body[data-screen="cover"] .vote-ratio-bar { display: none !important; }
 
     <!-- Main -->
     <main>
+      <!-- 票数条：插在辩题和计时数字之间的空白处，首页和未开票时不显示 -->
+      <div class="vote-ratio-bar" id="voteRatioBar" hidden aria-live="polite">
+        <span class="vrb-count vrb-pro" id="vrbPro"></span>
+        <div class="vrb-track" id="vrbTrack">
+          <div class="vrb-fill vrb-fill-pro" id="vrbFillPro"></div>
+          <div class="vrb-fill vrb-fill-con" id="vrbFillCon"></div>
+        </div>
+        <span class="vrb-count vrb-con" id="vrbCon"></span>
+      </div>
       <div class="stage" id="stage"></div>
     </main>
 
@@ -4471,13 +4596,6 @@ body[data-screen="cover"] .vote-ratio-bar { display: none !important; }
 
   <div class="flash" id="flash"></div>
 
-  <!-- 票数条：在单 / 双计时页顶一条不打扰布局的小条，首页和未开票时不显示 -->
-  <div class="vote-ratio-bar" id="voteRatioBar" hidden aria-live="polite">
-    <span class="vrb-side vrb-pro" id="vrbPro"></span>
-    <span class="vrb-sep">/</span>
-    <span class="vrb-side vrb-con" id="vrbCon"></span>
-  </div>
-
   <!-- Vote panel -->
   <div class="overlay" id="voteOverlay"></div>
   <aside class="drawer vote-drawer" id="votePanel">
@@ -4510,6 +4628,7 @@ body[data-screen="cover"] .vote-ratio-bar { display: none !important; }
       </div>
       <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
         <button class="chip" id="voteCopyLink" type="button">复制链接</button>
+        <button class="chip" id="voteQrFullscreenBtn" type="button">全屏二维码</button>
         <button class="chip" id="voteNewRoom" type="button">新建房间</button>
       </div>
     </div>
@@ -4554,6 +4673,14 @@ body[data-screen="cover"] .vote-ratio-bar { display: none !important; }
       <div id="voteHistoryList" class="preset-list"></div>
     </div>
   </aside>
+
+  <!-- 二维码全屏展示：投给全场观众看，点任意位置或 Esc 退出 -->
+  <div class="vote-qr-fullscreen" id="voteQrFullscreen" hidden>
+    <div class="vqf-room" id="vqfRoom"></div>
+    <div class="vqf-qr" id="vqfQr"></div>
+    <div class="vqf-url" id="vqfUrl"></div>
+    <div class="vqf-hint">点击任意位置或按 Esc 退出</div>
+  </div>
 <script>
 /* vote-core.js — 纯函数计票逻辑，不依赖 DOM / 网络，浏览器和 Node 都能跑。
  * 浏览器：<script src="vote-core.js"> 之后用 window.VoteCore。
@@ -4769,7 +4896,8 @@ body[data-screen="cover"] .vote-ratio-bar { display: none !important; }
       'votePhase', 'voteCounts', 'voteStartBtn', 'voteLockBaseline', 'voteEndBtn', 'voteResetBtn',
       'voteResultSection', 'voteResultBox', 'voteExportJson', 'voteExportCsv',
       'voteSwRatioBar', 'voteHistoryList',
-      'voteRatioBar', 'vrbPro', 'vrbCon',
+      'voteRatioBar', 'vrbPro', 'vrbCon', 'vrbFillPro', 'vrbFillCon',
+      'voteQrFullscreenBtn', 'voteQrFullscreen', 'vqfRoom', 'vqfQr', 'vqfUrl',
     ].forEach(function (id) { dom[id] = document.getElementById(id); });
   }
 
@@ -4793,8 +4921,7 @@ body[data-screen="cover"] .vote-ratio-bar { display: none !important; }
     return base + sep + 'room=' + encodeURIComponent(room);
   }
 
-  function renderQr(url) {
-    var wrap = dom.voteQrWrap;
+  function renderQrInto(wrap, url) {
     if (!wrap) return;
     wrap.innerHTML = '';
     if (typeof window.qrcode !== 'function') {
@@ -4815,7 +4942,25 @@ body[data-screen="cover"] .vote-ratio-bar { display: none !important; }
     var url = voteUrlFor(state.room);
     if (dom.voteRoomCode) dom.voteRoomCode.textContent = state.room;
     if (dom.voteLinkInput) dom.voteLinkInput.value = url;
-    renderQr(url);
+    renderQrInto(dom.voteQrWrap, url);
+    if (dom.voteQrFullscreen && !dom.voteQrFullscreen.hidden) renderFullscreenQr();
+  }
+
+  function renderFullscreenQr() {
+    var url = voteUrlFor(state.room);
+    if (dom.vqfRoom) dom.vqfRoom.textContent = '房间 ' + state.room;
+    if (dom.vqfUrl) dom.vqfUrl.textContent = url;
+    renderQrInto(dom.vqfQr, url);
+  }
+
+  function openQrFullscreen() {
+    if (!dom.voteQrFullscreen) return;
+    renderFullscreenQr();
+    dom.voteQrFullscreen.hidden = false;
+  }
+  function closeQrFullscreen() {
+    if (!dom.voteQrFullscreen) return;
+    dom.voteQrFullscreen.hidden = true;
   }
 
   var PHASE_LABEL = {
@@ -4836,6 +4981,11 @@ body[data-screen="cover"] .vote-ratio-bar { display: none !important; }
     var conText = '反方 ' + c.con + (showDelta ? ' (' + fmtDelta(c.con - state.baseline.con) + ')' : '');
     if (dom.vrbPro) dom.vrbPro.textContent = proText;
     if (dom.vrbCon) dom.vrbCon.textContent = conText;
+    // 票数条里的占比条：0 票时各占一半，避免看起来像"没有数据"
+    var proPct = c.total > 0 ? (c.pro / c.total * 100) : 50;
+    var conPct = c.total > 0 ? (c.con / c.total * 100) : 50;
+    if (dom.vrbFillPro) dom.vrbFillPro.style.width = proPct + '%';
+    if (dom.vrbFillCon) dom.vrbFillCon.style.width = conPct + '%';
     bar.hidden = false;
   }
 
@@ -4930,9 +5080,17 @@ body[data-screen="cover"] .vote-ratio-bar { display: none !important; }
     return state.result || VC.buildResult(state.room, state.baseline, state.tally);
   }
 
-  /* ---------------- Supabase channel ---------------- */
+  /* ---------------- Supabase channel ----------------
+   * 两条频道分流，避免票数一多就把 Realtime 的消息配额用爆：
+   * - room-<code>      只用来收观众的投票广播，主持端订阅它；观众发票不订阅这条
+   *   （见 vote.html，走 REST 广播），所以一条投票只产生"发到主持端"这一次投递，
+   *   不会再广播给同房间的其他观众。
+   * - room-<code>-ctl  主持端在这条频道广播 open/closed/sync，观众只订阅这条来
+   *   接收主持端的状态；这条才是观众真正保持的 Realtime 订阅。
+   */
   var client = null;
-  var channel = null;
+  var channel = null; // room-<code>，收票
+  var ctlChannel = null; // room-<code>-ctl，发 open/closed/sync
   var backoff = 1000;
   var reconnectTimer = null;
   var destroyed = false;
@@ -4954,8 +5112,8 @@ body[data-screen="cover"] .vote-ratio-bar { display: none !important; }
   }
 
   function broadcastMsg(payload) {
-    if (!channel) return;
-    try { channel.send({ type: 'broadcast', event: 'msg', payload: payload }); } catch (e) {}
+    if (!ctlChannel) return;
+    try { ctlChannel.send({ type: 'broadcast', event: 'msg', payload: payload }); } catch (e) {}
   }
   function broadcastPhase() { broadcastMsg({ type: openOrClosedType() }); }
   function broadcastSync() { broadcastMsg({ type: 'sync' }); }
@@ -4979,10 +5137,9 @@ body[data-screen="cover"] .vote-ratio-bar { display: none !important; }
 
   function connect() {
     if (destroyed || !ensureClient()) return;
-    if (channel) {
-      try { client.removeChannel(channel); } catch (e) {}
-      channel = null;
-    }
+    if (channel) { try { client.removeChannel(channel); } catch (e) {} channel = null; }
+    if (ctlChannel) { try { client.removeChannel(ctlChannel); } catch (e) {} ctlChannel = null; }
+
     var ch = client.channel('room-' + state.room);
     ch.on('broadcast', { event: 'msg' }, function (msg) { handleIncoming(msg && msg.payload); });
     ch.subscribe(function (status) {
@@ -4990,11 +5147,23 @@ body[data-screen="cover"] .vote-ratio-bar { display: none !important; }
       if (status === 'SUBSCRIBED') {
         channel = ch;
         backoff = 1000;
+      } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        if (channel === ch) channel = null;
+        scheduleReconnect();
+      }
+    });
+
+    var ctl = client.channel('room-' + state.room + '-ctl');
+    ctl.subscribe(function (status) {
+      if (destroyed) return;
+      if (status === 'SUBSCRIBED') {
+        ctlChannel = ctl;
+        backoff = 1000;
         // 主持端刚连上（或刷新恢复）：告诉观众当前开/关状态，并要求大家重发一次自己的票
         broadcastPhase();
         broadcastSync();
       } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        if (channel === ch) channel = null;
+        if (ctlChannel === ctl) ctlChannel = null;
         scheduleReconnect();
       }
     });
@@ -5005,6 +5174,9 @@ body[data-screen="cover"] .vote-ratio-bar { display: none !important; }
     if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
     connect();
   }
+
+  // 仅供 e2e 测试读取频道订阅状态，不影响正常运行
+  window.__voteHostChannelsForTest = { get vote() { return channel; }, get ctl() { return ctlChannel; } };
 
   /* ---------------- Actions ---------------- */
   function doStart() {
@@ -5102,8 +5274,14 @@ body[data-screen="cover"] .vote-ratio-bar { display: none !important; }
     if (dom.voteOverlay) dom.voteOverlay.addEventListener('click', closeVotePanel);
     var btnSettings = document.getElementById('btnSettings');
     if (btnSettings) btnSettings.addEventListener('click', closeVotePanel);
+
+    if (dom.voteQrFullscreenBtn) dom.voteQrFullscreenBtn.addEventListener('click', openQrFullscreen);
+    if (dom.voteQrFullscreen) dom.voteQrFullscreen.addEventListener('click', closeQrFullscreen);
+
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && dom.votePanel && dom.votePanel.classList.contains('open')) closeVotePanel();
+      if (e.key !== 'Escape') return;
+      if (dom.voteQrFullscreen && !dom.voteQrFullscreen.hidden) { closeQrFullscreen(); return; }
+      if (dom.votePanel && dom.votePanel.classList.contains('open')) closeVotePanel();
     });
 
     if (dom.voteStartBtn) dom.voteStartBtn.addEventListener('click', doStart);

@@ -76,7 +76,8 @@
       'votePhase', 'voteCounts', 'voteStartBtn', 'voteLockBaseline', 'voteEndBtn', 'voteResetBtn',
       'voteResultSection', 'voteResultBox', 'voteExportJson', 'voteExportCsv',
       'voteSwRatioBar', 'voteHistoryList',
-      'voteRatioBar', 'vrbPro', 'vrbCon',
+      'voteRatioBar', 'vrbPro', 'vrbCon', 'vrbFillPro', 'vrbFillCon',
+      'voteQrFullscreenBtn', 'voteQrFullscreen', 'vqfRoom', 'vqfQr', 'vqfUrl',
     ].forEach(function (id) { dom[id] = document.getElementById(id); });
   }
 
@@ -100,8 +101,7 @@
     return base + sep + 'room=' + encodeURIComponent(room);
   }
 
-  function renderQr(url) {
-    var wrap = dom.voteQrWrap;
+  function renderQrInto(wrap, url) {
     if (!wrap) return;
     wrap.innerHTML = '';
     if (typeof window.qrcode !== 'function') {
@@ -122,7 +122,25 @@
     var url = voteUrlFor(state.room);
     if (dom.voteRoomCode) dom.voteRoomCode.textContent = state.room;
     if (dom.voteLinkInput) dom.voteLinkInput.value = url;
-    renderQr(url);
+    renderQrInto(dom.voteQrWrap, url);
+    if (dom.voteQrFullscreen && !dom.voteQrFullscreen.hidden) renderFullscreenQr();
+  }
+
+  function renderFullscreenQr() {
+    var url = voteUrlFor(state.room);
+    if (dom.vqfRoom) dom.vqfRoom.textContent = '房间 ' + state.room;
+    if (dom.vqfUrl) dom.vqfUrl.textContent = url;
+    renderQrInto(dom.vqfQr, url);
+  }
+
+  function openQrFullscreen() {
+    if (!dom.voteQrFullscreen) return;
+    renderFullscreenQr();
+    dom.voteQrFullscreen.hidden = false;
+  }
+  function closeQrFullscreen() {
+    if (!dom.voteQrFullscreen) return;
+    dom.voteQrFullscreen.hidden = true;
   }
 
   var PHASE_LABEL = {
@@ -143,6 +161,11 @@
     var conText = '反方 ' + c.con + (showDelta ? ' (' + fmtDelta(c.con - state.baseline.con) + ')' : '');
     if (dom.vrbPro) dom.vrbPro.textContent = proText;
     if (dom.vrbCon) dom.vrbCon.textContent = conText;
+    // 票数条里的占比条：0 票时各占一半，避免看起来像"没有数据"
+    var proPct = c.total > 0 ? (c.pro / c.total * 100) : 50;
+    var conPct = c.total > 0 ? (c.con / c.total * 100) : 50;
+    if (dom.vrbFillPro) dom.vrbFillPro.style.width = proPct + '%';
+    if (dom.vrbFillCon) dom.vrbFillCon.style.width = conPct + '%';
     bar.hidden = false;
   }
 
@@ -237,9 +260,17 @@
     return state.result || VC.buildResult(state.room, state.baseline, state.tally);
   }
 
-  /* ---------------- Supabase channel ---------------- */
+  /* ---------------- Supabase channel ----------------
+   * 两条频道分流，避免票数一多就把 Realtime 的消息配额用爆：
+   * - room-<code>      只用来收观众的投票广播，主持端订阅它；观众发票不订阅这条
+   *   （见 vote.html，走 REST 广播），所以一条投票只产生"发到主持端"这一次投递，
+   *   不会再广播给同房间的其他观众。
+   * - room-<code>-ctl  主持端在这条频道广播 open/closed/sync，观众只订阅这条来
+   *   接收主持端的状态；这条才是观众真正保持的 Realtime 订阅。
+   */
   var client = null;
-  var channel = null;
+  var channel = null; // room-<code>，收票
+  var ctlChannel = null; // room-<code>-ctl，发 open/closed/sync
   var backoff = 1000;
   var reconnectTimer = null;
   var destroyed = false;
@@ -261,8 +292,8 @@
   }
 
   function broadcastMsg(payload) {
-    if (!channel) return;
-    try { channel.send({ type: 'broadcast', event: 'msg', payload: payload }); } catch (e) {}
+    if (!ctlChannel) return;
+    try { ctlChannel.send({ type: 'broadcast', event: 'msg', payload: payload }); } catch (e) {}
   }
   function broadcastPhase() { broadcastMsg({ type: openOrClosedType() }); }
   function broadcastSync() { broadcastMsg({ type: 'sync' }); }
@@ -286,10 +317,9 @@
 
   function connect() {
     if (destroyed || !ensureClient()) return;
-    if (channel) {
-      try { client.removeChannel(channel); } catch (e) {}
-      channel = null;
-    }
+    if (channel) { try { client.removeChannel(channel); } catch (e) {} channel = null; }
+    if (ctlChannel) { try { client.removeChannel(ctlChannel); } catch (e) {} ctlChannel = null; }
+
     var ch = client.channel('room-' + state.room);
     ch.on('broadcast', { event: 'msg' }, function (msg) { handleIncoming(msg && msg.payload); });
     ch.subscribe(function (status) {
@@ -297,11 +327,23 @@
       if (status === 'SUBSCRIBED') {
         channel = ch;
         backoff = 1000;
+      } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        if (channel === ch) channel = null;
+        scheduleReconnect();
+      }
+    });
+
+    var ctl = client.channel('room-' + state.room + '-ctl');
+    ctl.subscribe(function (status) {
+      if (destroyed) return;
+      if (status === 'SUBSCRIBED') {
+        ctlChannel = ctl;
+        backoff = 1000;
         // 主持端刚连上（或刷新恢复）：告诉观众当前开/关状态，并要求大家重发一次自己的票
         broadcastPhase();
         broadcastSync();
       } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        if (channel === ch) channel = null;
+        if (ctlChannel === ctl) ctlChannel = null;
         scheduleReconnect();
       }
     });
@@ -312,6 +354,9 @@
     if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
     connect();
   }
+
+  // 仅供 e2e 测试读取频道订阅状态，不影响正常运行
+  window.__voteHostChannelsForTest = { get vote() { return channel; }, get ctl() { return ctlChannel; } };
 
   /* ---------------- Actions ---------------- */
   function doStart() {
@@ -409,8 +454,14 @@
     if (dom.voteOverlay) dom.voteOverlay.addEventListener('click', closeVotePanel);
     var btnSettings = document.getElementById('btnSettings');
     if (btnSettings) btnSettings.addEventListener('click', closeVotePanel);
+
+    if (dom.voteQrFullscreenBtn) dom.voteQrFullscreenBtn.addEventListener('click', openQrFullscreen);
+    if (dom.voteQrFullscreen) dom.voteQrFullscreen.addEventListener('click', closeQrFullscreen);
+
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && dom.votePanel && dom.votePanel.classList.contains('open')) closeVotePanel();
+      if (e.key !== 'Escape') return;
+      if (dom.voteQrFullscreen && !dom.voteQrFullscreen.hidden) { closeQrFullscreen(); return; }
+      if (dom.votePanel && dom.votePanel.classList.contains('open')) closeVotePanel();
     });
 
     if (dom.voteStartBtn) dom.voteStartBtn.addEventListener('click', doStart);
