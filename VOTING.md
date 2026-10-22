@@ -78,4 +78,16 @@ window.DEBATE_VOTE_CONFIG = {
 
 ## 5. Supabase 免费版 Realtime 限制
 
-TODO_LIMITS
+来源：<https://supabase.com/docs/guides/realtime/limits>（2026-10-22 查阅）
+
+| 项目 | Free | Pro |
+| --- | --- | --- |
+| 并发连接 | 200 | 500 |
+| 消息/秒（项目级，发出+投递都算） | 100 | 500 |
+| 频道加入/秒 | 100 | 500 |
+| Broadcast 单条负载 | 256 KB | 3000 KB |
+
+注意：一条 broadcast 会投递给频道内每个订阅者，每次投递都计一个 event。观众页只需要收主持端的 sync/open/closed，主持端需要收所有投票，因此：
+- 100+ 观众同时扫码：连接数 OK（≤200），但同一秒内全部加入可能触发 `too_many_joins`，客户端会退避重试。
+- 主持端广播 `sync`/`open`/`closed` 一次 ≈ N 个 event（N=在线人数），随后所有观众重发投票又 ≈ 2N（发出+投递给主持端及其他观众）。150 人时会短暂超过 100 msg/s，超限会被断开，supabase-js 会在流量下降后自动重连，观众页也会重发。避免频繁点 sync / 刷新主持端。
+- 超过 ~150 人或正式比赛建议升级 Pro。

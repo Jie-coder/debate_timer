@@ -118,7 +118,7 @@
   const state = {
     stages: DEFAULT_STAGES.map(s => ({...s})),
     currentId: 'cover',
-    theme: 'arena',
+    theme: 'neo',
     fontScale: 1,
     sound: true,
     volume: 1, // 0–1，设置里的音量拉杆
@@ -1488,7 +1488,7 @@
   function closeDrawer() { drawer.classList.remove('open'); overlay.classList.remove('show'); }
 
   /* ---------------- Theme + font ---------------- */
-  const THEMES = ['arena', 'academy', 'soft', 'broadcast', 'terminal'];
+  const THEMES = ['neo', 'arena', 'academy', 'soft', 'broadcast', 'terminal'];
   function applyTheme() {
     // 旧版的 warm / dark / paper 已下线，存档里的旧值统一落到默认主题
     if (THEMES.indexOf(state.theme) < 0) state.theme = THEMES[0];
