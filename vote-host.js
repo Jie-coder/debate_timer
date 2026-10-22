@@ -8,9 +8,15 @@
   if (!VC) { console.error('vote-host.js: VoteCore 未加载'); return; }
 
   var STORAGE_KEY = 'debate-timer-v2-vote';
+  var TIMER_STORAGE_KEY = 'debate-timer-v2';
   var HISTORY_KEY = 'debate-timer-v2-vote-history';
   var ROOM_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   var BACKOFF_MAX = 15000;
+
+  function readTimerVoteEnabled() {
+    var saved = loadJSON(TIMER_STORAGE_KEY, null);
+    return !!(saved && saved.voteEnabled);
+  }
 
   function genRoomCode() {
     var s = '';
@@ -45,6 +51,7 @@
   /* ---------------- State ---------------- */
   var savedSession = loadJSON(STORAGE_KEY, null);
   var state = {
+    enabled: readTimerVoteEnabled(),
     room: (savedSession && savedSession.room) || genRoomCode(),
     phase: (savedSession && savedSession.phase) || 'idle', // idle | collecting | live | closed
     baseline: (savedSession && savedSession.baseline) || null,
@@ -153,7 +160,7 @@
   function updateRatioBar() {
     var bar = dom.voteRatioBar;
     if (!bar) return;
-    var show = state.ratioBarOn && state.phase !== 'idle';
+    var show = state.enabled && state.ratioBarOn && state.phase !== 'idle';
     if (!show) { bar.hidden = true; return; }
     var c = VC.counts(state.tally);
     var showDelta = !!state.baseline;
@@ -172,6 +179,31 @@
   function updateCountsUI() {
     var c = VC.counts(state.tally);
     if (dom.voteCounts) dom.voteCounts.textContent = '正方 ' + c.pro + ' · 反方 ' + c.con + '（共 ' + c.total + ' 人）';
+    updateRatioBar();
+  }
+
+  function notifyUpdate() {
+    try { window.dispatchEvent(new CustomEvent('vote:update')); } catch (e) {}
+  }
+
+  function getSnapshot() {
+    var c = VC.counts(state.tally);
+    return {
+      counts: { pro: c.pro, con: c.con },
+      baseline: state.baseline ? { pro: state.baseline.pro, con: state.baseline.con } : null,
+      phase: state.phase,
+    };
+  }
+
+  function setEnabled(on) {
+    state.enabled = !!on;
+    if (dom.btnVote) dom.btnVote.hidden = !state.enabled;
+    if (dom.votePanel) dom.votePanel.hidden = !state.enabled;
+    if (!state.enabled) {
+      closeVotePanel();
+      if (dom.voteRatioBar) dom.voteRatioBar.hidden = true;
+      return;
+    }
     updateRatioBar();
   }
 
@@ -241,6 +273,7 @@
     updateCountsUI();
     if (dom.voteSwRatioBar) dom.voteSwRatioBar.classList.toggle('on', state.ratioBarOn);
     renderHistory();
+    notifyUpdate();
   }
 
   /* ---------------- Export ---------------- */
@@ -303,6 +336,7 @@
     if (VC.applyVote(state.tally, payload)) {
       persistSession();
       updateCountsUI();
+      notifyUpdate();
     }
   }
 
@@ -506,9 +540,12 @@
     cacheDom();
     if (!dom.btnVote || !dom.votePanel) return; // 页面结构不对就安静退出，不影响主计时器
     wireEvents();
+    setEnabled(state.enabled);
     render();
     if (hasConfig()) connect();
   }
+
+  window.VoteHost = { setEnabled: setEnabled, getSnapshot: getSnapshot };
 
   init();
 })();

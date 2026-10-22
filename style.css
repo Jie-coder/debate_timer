@@ -1347,22 +1347,40 @@ body:has(.vote-ratio-bar:not([hidden])) main {
   padding: 0 !important;
 }
 
-/* 票数条显示时，单计时的数字本身不缩（保持大尺寸），但让周围的间距和按钮边距
-   更紧凑一点，把票数条占掉的高度让出来，避免矮屏幕下数字区域被挤出可用区域 */
+/* 票数条显示时，单计时的数字本身不缩（保持和不开投票时一样大），只收紧
+   辩题、票数条、环节名和进度条周围的纵向留白，把票数条占掉的高度让出来 */
+body:has(.vote-ratio-bar:not([hidden])) .brand-topic {
+  font-size: clamp(16px, 1.6vw, 20px) !important;
+  line-height: 1.1 !important;
+  padding-block: 2px !important;
+}
+body:has(.vote-ratio-bar:not([hidden])) .vote-ratio-bar {
+  margin-bottom: clamp(2px, 0.6vh, 6px) !important;
+  padding-block: clamp(4px, 0.8vh, 8px) !important;
+}
 body:has(.vote-ratio-bar:not([hidden])) .stage-single .single-timer {
-  gap: clamp(4px, 1vh, 14px) !important;
+  gap: clamp(2px, 0.8vh, 10px) !important;
+}
+body:has(.vote-ratio-bar:not([hidden])) .stage-single .single-label {
+  font-size: clamp(16px, 2.2vw, 30px) !important;
+  line-height: 1 !important;
 }
 body:has(.vote-ratio-bar:not([hidden])) .stage-single .timer-actions {
-  margin-top: clamp(2px, 0.6vh, 8px) !important;
+  margin-top: clamp(0px, 0.4vh, 6px) !important;
 }
 body:has(.vote-ratio-bar:not([hidden])) .stage-single .progress-wrap {
-  gap: clamp(4px, 0.8vh, 10px) !important;
+  gap: clamp(2px, 0.6vh, 8px) !important;
 }
-/* 宽屏 + 矮视口（比如 1440×768）时数字本来就顶格，票数条再占一截空间会把
-   数字挤出可用区域；按视口高度多封一个上限，只在票数条显示时生效，
-   不影响不开投票时的默认大小 */
-body:has(.vote-ratio-bar:not([hidden])) .stage-single .single-time {
-  font-size: clamp(76px, 13vw, min(174px, 21vh)) !important;
+body:has(.vote-ratio-bar:not([hidden])) .stage-single .progress-meta {
+  font-size: 11px !important;
+}
+body:has(.vote-ratio-bar:not([hidden])) .stage-duel .duel {
+  height: 100% !important;
+  min-height: 0 !important;
+}
+body:has(.vote-ratio-bar:not([hidden])) .stage-duel .duel-panel {
+  padding-block: clamp(12px, 2.2vh, 32px) !important;
+  gap: clamp(6px, 1.4vh, 16px) !important;
 }
 
 .single-label {
@@ -4197,6 +4215,183 @@ body[data-screen="cover"] .vote-ratio-bar { display: none !important; }
 .vrb-fill-pro { background: var(--accent); }
 .vrb-fill-con { background: var(--warn); }
 
+/* 赛前 / 最终票数页：Neo-Brutalism 柱状图 */
+.stage-vote-pre,
+.stage-vote-final {
+  justify-content: stretch !important;
+  overflow: hidden !important;
+}
+.vote-page {
+  --vote-pro: var(--lk-pro, #0040ff);
+  --vote-con: var(--lk-con, #ff2d78);
+  --vote-line: var(--border-strong, var(--ink));
+  width: min(100%, 1120px);
+  height: 100%;
+  min-height: 0;
+  margin: 0 auto;
+  padding: clamp(10px, 2.4vh, 30px) clamp(12px, 4vw, 48px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  justify-content: safe center;
+  align-items: stretch;
+  gap: clamp(12px, 2.6vh, 30px);
+  color: var(--ink);
+  text-align: center;
+  overflow-y: auto;
+}
+.vote-page-head {
+  display: grid;
+  justify-items: center;
+  gap: clamp(4px, 1vh, 10px);
+}
+.vote-page-eyebrow {
+  color: var(--ink-3);
+  font-family: "JetBrains Mono", monospace;
+  font-size: clamp(10px, 1.2vw, 13px);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.vote-page-title {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--lk-ui, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif);
+  font-size: clamp(24px, 4vw, 52px);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1.05;
+}
+.vote-page-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 14px;
+  color: var(--ink-2);
+  font-family: "JetBrains Mono", monospace;
+  font-size: clamp(12px, 1.4vw, 17px);
+}
+.vote-page-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border: 1.5px solid var(--vote-line);
+  border-radius: 2px;
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.vote-page-total { font-weight: 700; }
+.vote-page-hint {
+  margin: 0;
+  color: var(--ink-3);
+  font-family: "JetBrains Mono", monospace;
+  font-size: clamp(11px, 1.2vw, 14px);
+  letter-spacing: 0.04em;
+}
+.vote-chart {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: min(100%, 880px);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(24px, 7vw, 120px);
+  align-items: stretch;
+  justify-items: center;
+}
+.vote-chart-col {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  align-items: end;
+  justify-items: center;
+  gap: clamp(4px, 1vh, 12px);
+}
+.vote-chart-count {
+  color: var(--ink);
+  font-family: var(--lk-num, "Arial Black", "Helvetica Neue", "Noto Sans SC", sans-serif);
+  font-size: clamp(40px, 7.5vw, 104px);
+  font-weight: 900;
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+}
+.vote-chart-pro .vote-chart-count { color: var(--vote-pro); }
+.vote-chart-con .vote-chart-count { color: var(--vote-con); }
+.vote-chart-track {
+  width: clamp(72px, 12vw, 150px);
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: flex-end;
+  border: 2px solid var(--vote-line);
+  border-radius: 2px;
+  background: var(--bg-2);
+  overflow: hidden;
+}
+.vote-chart-fill {
+  width: 100%;
+  min-height: 0;
+  background: var(--vote-pro);
+  transition: height 0.3s ease;
+}
+.vote-chart-con .vote-chart-fill { background: var(--vote-con); }
+.vote-chart-stance {
+  display: -webkit-box;
+  max-width: 100%;
+  color: var(--ink);
+  font-size: clamp(13px, 1.7vw, 22px);
+  font-weight: 800;
+  line-height: 1.25;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.vote-chart-delta {
+  color: var(--ink-2);
+  font-family: "JetBrains Mono", monospace;
+  font-size: clamp(14px, 1.8vw, 24px);
+  font-weight: 800;
+  line-height: 1;
+}
+
+html body[data-theme="neo"] .vote-chart-track {
+  border-width: 3px !important;
+  background: #fff !important;
+  box-shadow: var(--lk-shadow) !important;
+}
+html body[data-theme="neo"] .vote-page-status {
+  border-width: 2px !important;
+  box-shadow: var(--lk-shadow) !important;
+}
+
+@media (max-width: 760px) {
+  .vote-page {
+    gap: clamp(8px, 2vh, 16px);
+    padding: 6px 8px 10px;
+  }
+  .vote-page-title { font-size: clamp(20px, 7vw, 32px); }
+  .vote-chart { gap: clamp(16px, 6vw, 40px); }
+  .vote-chart-count { font-size: clamp(34px, 12vw, 64px); }
+  .vote-chart-track { width: clamp(58px, 18vw, 110px); }
+  .vote-chart-stance { font-size: clamp(12px, 4vw, 18px); }
+}
+
+@media (max-height: 640px) {
+  .vote-page {
+    gap: clamp(6px, 1.6vh, 16px);
+    padding-block: clamp(4px, 1.4vh, 12px);
+  }
+  .vote-page-title { font-size: clamp(20px, 3.4vw, 36px); }
+  .vote-chart-count { font-size: clamp(30px, 6vw, 72px); }
+  .vote-chart-stance { font-size: clamp(12px, 1.6vw, 18px); }
+}
+
 /* 二维码全屏展示：投给全场看，盖住一切（包括设置抽屉），点哪都能退出 */
 .vote-qr-fullscreen {
   position: fixed;
@@ -4321,3 +4516,15 @@ body[data-screen="cover"] .vote-ratio-bar { display: none !important; }
   font-size: 12px;
   color: var(--ink-3);
 }
+
+/* 关闭观众投票时彻底隐藏（hidden 属性压过 display 规则） */
+#btnVote[hidden],
+#voteRatioBar[hidden],
+#votePanel[hidden] { display: none !important; }
+
+/* 票数页本身就是大图表，不再重复显示顶部票数条；柱子保底高度，桌面端不被压扁 */
+body[data-screen="vote-pre"] .vote-ratio-bar,
+body[data-screen="vote-final"] .vote-ratio-bar { display: none !important; }
+.vote-chart { flex: 0 0 auto; }
+.vote-chart-col { height: auto; grid-template-rows: auto auto auto auto; }
+.vote-chart-track { height: clamp(80px, 17vh, 240px); min-height: 0; }

@@ -75,6 +75,13 @@ async function main() {
   try {
     // ---------- Host ----------
     const hostCtx = await browser.newContext();
+    // 观众投票默认关闭：先在主状态里打开开关
+    await hostCtx.addInitScript(() => {
+      try {
+        const s = JSON.parse(localStorage.getItem('debate-timer-v2') || '{}');
+        if (!s.voteEnabled) { s.voteEnabled = true; localStorage.setItem('debate-timer-v2', JSON.stringify(s)); }
+      } catch (e) {}
+    });
     const host = await hostCtx.newPage();
     dialogAccept(host);
     await host.goto(`http://localhost:${PORT}/index.html`);
