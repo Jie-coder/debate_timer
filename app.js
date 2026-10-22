@@ -118,7 +118,7 @@
   const state = {
     stages: DEFAULT_STAGES.map(s => ({...s})),
     currentId: 'cover',
-    theme: 'arena',
+    theme: 'neo',
     fontScale: 1,
     sound: true,
     volume: 1, // 0–1，设置里的音量拉杆
@@ -126,8 +126,11 @@
     autoFlow: false,
     proName: '',
     conName: '',
+    proStance: '',
+    conStance: '',
     topic: '',
     matchStage: '',
+    voteEnabled: false,
     // runtime
     running: false,
     remaining: 180,
@@ -152,17 +155,44 @@
     cover.duration = 0;
     cover.name = cover.name || base.name;
     state.stages = state.stages.map(s => {
-      const type = s.type === 'duel' ? 'duel' : (s.type === 'cover' ? 'cover' : 'single');
+      const noTimer = s.type === 'cover' || s.type === 'vote-pre' || s.type === 'vote-final';
+      const type = s.type === 'duel' ? 'duel' : (noTimer ? s.type : 'single');
       const out = {
         ...s,
         type,
-        duration: type === 'cover' ? 0 : Math.max(10, Number(s.duration) || 60),
+        duration: noTimer ? 0 : Math.max(10, Number(s.duration) || 60),
       };
       // 只保留合法的显式设置，其余交给 duelFlowOf() 按环节名推断
       if (!isDuelFlow(out.duelFlow)) delete out.duelFlow;
       return out;
     });
     state.stages.unshift(cover);
+  }
+
+  // 无计时的特殊环节：首页、赛前票数、最终票数——不参与倒计时、开始/重置按钮
+  function isTimerless(mode) {
+    return mode === 'cover' || mode === 'vote-pre' || mode === 'vote-final';
+  }
+
+  /* ---------------- Vote stages (赛前票数 / 最终票数) ----------------
+     只在 state.voteEnabled 时存在；位置固定在首页之后、流程末尾，做法和
+     ensureCoverStage() 一样：先从数组里摘掉，再按需要重新插回固定位置，
+     调用后同样必须重新 renderStagesList()。关闭投票时整段移除，且绝不
+     写进计时器预设（见 cloneStages()）。 */
+  function ensureVoteStages() {
+    if (!Array.isArray(state.stages)) state.stages = [];
+    const takeOut = (match) => {
+      const idx = state.stages.findIndex(match);
+      return idx >= 0 ? state.stages.splice(idx, 1)[0] : null;
+    };
+    let pre = takeOut(s => s.type === 'vote-pre');
+    let fin = takeOut(s => s.type === 'vote-final');
+    if (!state.voteEnabled) return;
+    pre = Object.assign({ id: 'vote-pre', name: '赛前票数' }, pre, { id: 'vote-pre', type: 'vote-pre', duration: 0 });
+    fin = Object.assign({ id: 'vote-final', name: '最终票数' }, fin, { id: 'vote-final', type: 'vote-final', duration: 0 });
+    const coverIdx = state.stages.findIndex(s => s.type === 'cover');
+    state.stages.splice(coverIdx >= 0 ? coverIdx + 1 : 0, 0, pre);
+    state.stages.push(fin);
   }
 
   /* ---------------- LocalStorage ---------------- */
@@ -175,7 +205,8 @@
       theme: state.theme,
       fontScale: state.fontScale, sound: state.sound, volume: state.volume, tick: state.tick,
       autoFlow: state.autoFlow, proName: state.proName, conName: state.conName,
-      topic: state.topic, matchStage: state.matchStage,
+      proStance: state.proStance, conStance: state.conStance,
+      topic: state.topic, matchStage: state.matchStage, voteEnabled: state.voteEnabled,
     };
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch (e) {}
   }
@@ -186,11 +217,13 @@
       Object.assign(state, s);
       if (typeof state.matchStage !== 'string') state.matchStage = '2026 \u534e\u4e2d\u676f \u521d\u8d5b';
       state.volume = clampVolume(state.volume);
+      state.voteEnabled = !!state.voteEnabled;
       if (!Array.isArray(state.stages) || state.stages.length === 0) {
         state.stages = DEFAULT_STAGES.map(x => ({...x}));
         state.currentId = state.stages[0].id;
       }
       ensureCoverStage();
+      ensureVoteStages();
       if (!state.stages.find(x => x.id === state.currentId)) {
         state.currentId = state.stages[0].id;
       }
@@ -371,6 +404,10 @@
     stage.className = 'stage stage-' + mode;
     if (mode === 'cover') {
       renderCover();
+    } else if (mode === 'vote-pre') {
+      renderVotePre();
+    } else if (mode === 'vote-final') {
+      renderVoteFinal();
     } else if (mode === 'duel') {
       renderDuel();
     } else {
@@ -395,16 +432,109 @@
           '<label class="cover-team cover-team-pro" for="coverProSchool">' +
             '<span class="cover-team-tag">\u6b63\u65b9</span>' +
             '<input id="coverProSchool" class="cover-input cover-team-name" maxlength="32" value="' + escapeHtml(state.proName || '') + '" placeholder="\u6b63\u65b9\u5b66\u6821">' +
+            '<input id="coverProStance" class="cover-input cover-team-stance" maxlength="40" value="' + escapeHtml(state.proStance || '') + '" placeholder="\u6b63\u65b9\u7acb\u573a\uff08\u9009\u586b\uff09">' +
           '</label>' +
           '<div class="cover-vs" aria-hidden="true">VS</div>' +
           '<label class="cover-team cover-team-con" for="coverConSchool">' +
             '<span class="cover-team-tag">\u53cd\u65b9</span>' +
             '<input id="coverConSchool" class="cover-input cover-team-name" maxlength="32" value="' + escapeHtml(state.conName || '') + '" placeholder="\u53cd\u65b9\u5b66\u6821">' +
+            '<input id="coverConStance" class="cover-input cover-team-stance" maxlength="40" value="' + escapeHtml(state.conStance || '') + '" placeholder="\u53cd\u65b9\u7acb\u573a\uff08\u9009\u586b\uff09">' +
           '</label>' +
         '</div>' +
       '</section>';
     wireCoverInputs();
     fitCoverTeamNames();
+  }
+
+  function voteSnapshot() {
+    const host = window.VoteHost;
+    if (host && typeof host.getSnapshot === 'function') {
+      try {
+        const snap = host.getSnapshot();
+        if (snap && snap.counts) {
+          const count = v => Math.max(0, Number(v) || 0);
+          const baseline = snap.baseline
+            ? { pro: count(snap.baseline.pro), con: count(snap.baseline.con) }
+            : null;
+          return {
+            counts: { pro: count(snap.counts.pro), con: count(snap.counts.con) },
+            baseline,
+            phase: snap.phase || 'idle',
+          };
+        }
+      } catch (e) {}
+    }
+    return { counts: { pro: 0, con: 0 }, baseline: null, phase: 'idle' };
+  }
+
+  function voteDeltaText(n) {
+    if (n > 0) return '+' + n;
+    if (n < 0) return '\u2212' + Math.abs(n);
+    return '+0';
+  }
+
+  function renderVoteChart(counts, deltas) {
+    const max = Math.max(counts.pro, counts.con, 1);
+    const height = n => n <= 0 ? 0 : Math.max(6, n / max * 100);
+    const col = (side, count, stance, delta) =>
+      '<div class="vote-chart-col vote-chart-' + side + '">' +
+        '<div class="vote-chart-count">' + count + '</div>' +
+        '<div class="vote-chart-track">' +
+          '<div class="vote-chart-fill" style="height:' + height(count).toFixed(2) + '%"></div>' +
+        '</div>' +
+        '<div class="vote-chart-stance">' + escapeHtml(stance) + '</div>' +
+        (delta == null ? '' : '<div class="vote-chart-delta">' + voteDeltaText(delta) + '</div>') +
+      '</div>';
+    return '<div class="vote-chart" role="img" aria-label="\u6b63\u65b9 ' + counts.pro + ' \u7968\uff0c\u53cd\u65b9 ' + counts.con + ' \u7968">' +
+      col('pro', counts.pro, state.proStance || '\u6b63\u65b9', deltas ? deltas.pro : null) +
+      col('con', counts.con, state.conStance || '\u53cd\u65b9', deltas ? deltas.con : null) +
+    '</div>';
+  }
+
+  function renderVotePre() {
+    const snap = voteSnapshot();
+    const locked = !!snap.baseline;
+    const counts = locked ? snap.baseline : snap.counts;
+    const total = counts.pro + counts.con;
+    stage.innerHTML =
+      '<section class="vote-page vote-page-pre" aria-label="\u8d5b\u524d\u7968\u6570">' +
+        '<div class="vote-page-head">' +
+          '<div class="vote-page-eyebrow">\u89c2\u4f17\u6295\u7968</div>' +
+          '<h2 class="vote-page-title">\u8d5b\u524d\u7968\u6570</h2>' +
+          '<div class="vote-page-sub">' +
+            '<span class="vote-page-status">' + (locked ? '\u521d\u59cb\u7acb\u573a' : '\u5b9e\u65f6') + '</span>' +
+            '<span class="vote-page-total">\u5171 ' + total + ' \u4eba</span>' +
+          '</div>' +
+        '</div>' +
+        renderVoteChart(counts, null) +
+        '<p class="vote-page-hint">' + (locked ? '\u521d\u59cb\u7acb\u573a\u5df2\u9501\u5b9a' : '\u5728\u6295\u7968\u9762\u677f\u9501\u5b9a\u521d\u59cb\u7acb\u573a') + '</p>' +
+      '</section>';
+  }
+
+  function renderVoteFinal() {
+    const snap = voteSnapshot();
+    const counts = snap.counts;
+    const total = counts.pro + counts.con;
+    const deltas = snap.baseline
+      ? { pro: counts.pro - snap.baseline.pro, con: counts.con - snap.baseline.con }
+      : null;
+    stage.innerHTML =
+      '<section class="vote-page vote-page-final" aria-label="\u6700\u7ec8\u7968\u6570">' +
+        '<div class="vote-page-head">' +
+          '<div class="vote-page-eyebrow">\u89c2\u4f17\u6295\u7968</div>' +
+          '<h2 class="vote-page-title">\u6700\u7ec8\u7968\u6570</h2>' +
+          '<div class="vote-page-sub">' +
+            '<span class="vote-page-total">\u5171 ' + total + ' \u4eba\u6295\u7968</span>' +
+          '</div>' +
+        '</div>' +
+        renderVoteChart(counts, deltas) +
+        (deltas ? '' : '<p class="vote-page-hint">\u672c\u6b21\u6295\u7968\u6ca1\u6709\u9501\u5b9a\u521d\u59cb\u7acb\u573a</p>') +
+      '</section>';
+  }
+
+  function onVoteUpdate() {
+    const mode = curMode();
+    if (mode === 'vote-pre' || mode === 'vote-final') renderStage();
   }
 
   /* 首页队名：字多了就缩字号，正反方始终用同一个字号。
@@ -456,6 +586,8 @@
     setFieldValue('coverTopic', state.topic || '');
     setFieldValue('coverProSchool', state.proName || '');
     setFieldValue('coverConSchool', state.conName || '');
+    setFieldValue('coverProStance', state.proStance || '');
+    setFieldValue('coverConStance', state.conStance || '');
     fitCoverTeamNames();
   }
 
@@ -478,6 +610,8 @@
     // updateTimes() 在首页会走 syncCoverFields()，顺带重新适配队名字号
     bind('coverProSchool', 'proName', 32, () => { updateTimes(); applyInputs(); });
     bind('coverConSchool', 'conName', 32, () => { updateTimes(); applyInputs(); });
+    bind('coverProStance', 'proStance', 40);
+    bind('coverConStance', 'conStance', 40);
   }
 
   
@@ -687,6 +821,7 @@
       syncHeaderTopic();
       return;
     }
+    if (isTimerless(curMode())) return; // vote-pre / vote-final：票数由事件驱动的渲染负责，这里没有计时要同步
     if (curMode() === 'duel') {
       const proEl = document.getElementById('proTime');
       const conEl = document.getElementById('conTime');
@@ -817,7 +952,7 @@
   }
 
   function toggleRun() {
-    if (curMode() === 'cover') return;
+    if (isTimerless(curMode())) return;
     ensureAudio();
     // 时间到后不再继续计时：已归零的计时器不能再开始，只能重置
     if (!state.running && activeRemaining() <= 0) { updateStartButton(); return; }
@@ -838,7 +973,7 @@
   function resetTimer() {
     state.running = false;
     updateStartButton();
-    if (curMode() === 'cover') {
+    if (isTimerless(curMode())) {
       updateTimes();
       return;
     }
@@ -865,7 +1000,7 @@
     state.running = false;
     // Restore from cache (preserves remaining)
     const rt = getRuntime(id);
-    if (curMode() === 'cover') {
+    if (isTimerless(curMode())) {
       state.remaining = 0;
     } else if (curMode() === 'duel') {
       state.duel.pro = rt.duelPro;
@@ -885,7 +1020,7 @@
     const id = state.currentId;
     const rt = getRuntime(id);
     if (!rt) return;
-    if (curMode() === 'cover') {
+    if (isTimerless(curMode())) {
       return;
     }
     if (curMode() === 'duel') {
@@ -982,7 +1117,7 @@
         span.textContent = text;
         b.appendChild(span);
       };
-      if (s.type === 'cover') {
+      if (isTimerless(s.type)) {
         add('stage-panel-no', '');
         add('stage-panel-name', s.name);
       } else {
@@ -1028,7 +1163,7 @@
     const label = document.getElementById('startLabel');
     const icon = document.getElementById('iconPlay');
     const btn = document.getElementById('btnStart');
-    if (curMode() === 'cover') {
+    if (isTimerless(curMode())) {
       if (btn) { btn.disabled = true; btn.classList.add('disabled'); }
       label.textContent = '\u65e0\u8ba1\u65f6';
       icon.innerHTML = '<path d="M5 12h14"/>';
@@ -1093,23 +1228,28 @@
     list.innerHTML = '';
     state.stages.forEach((stg, idx) => {
       const isCover = stg.type === 'cover';
+      const isVote = stg.type === 'vote-pre' || stg.type === 'vote-final';
+      const locked = isCover || isVote; // 不能切类型/改时长/删除
       const row = document.createElement('div');
       row.className = 'stage-row';
-      row.draggable = true;
+      row.draggable = !isVote; // 投票环节位置固定，不能拖拽重排
       row.dataset.idx = idx;
+      const typeLabel = isCover ? '\u9996\u9875' : isVote ? '\u6295\u7968' : (stg.type === 'duel' ? '\u53cc' : '\u5355');
+      const typeTitle = isCover ? '\u9996\u9875\u4e0d\u53c2\u4e0e\u8ba1\u65f6' : isVote ? '\u6295\u7968\u73af\u8282\u4e0d\u53c2\u4e0e\u8ba1\u65f6\uff0c\u4f4d\u7f6e\u56fa\u5b9a' : '\u5207\u6362\u7c7b\u578b';
       row.innerHTML = `
         <span class="stage-grip">⋮⋮</span>
-        <input class="stage-name-input" value="${escapeHtml(stg.name)}" maxlength="10">
-        <button class="stage-type-pill" data-type="${stg.type}" title="${isCover ? '\u9996\u9875\u4e0d\u53c2\u4e0e\u8ba1\u65f6' : '\u5207\u6362\u7c7b\u578b'}" ${isCover ? 'disabled' : ''}>${isCover ? '\u9996\u9875' : (stg.type === 'duel' ? '\u53cc' : '\u5355')}</button>
+        <input class="stage-name-input" value="${escapeHtml(stg.name)}" maxlength="10" ${isVote ? 'disabled' : ''}>
+        <button class="stage-type-pill" data-type="${stg.type}" title="${typeTitle}" ${locked ? 'disabled' : ''}>${typeLabel}</button>
         <button class="stage-flow-pill"></button>
-        <input type="number" class="stage-dur-input" value="${stg.duration}" min="0" step="10" ${isCover ? 'disabled' : ''}>
+        <input type="number" class="stage-dur-input" value="${stg.duration}" min="0" step="10" ${locked ? 'disabled' : ''}>
         <span style="font-size:10px;color:var(--ink-3);font-family:'JetBrains Mono',monospace;">s</span>
-        <button class="stage-del" title="\u5220\u9664" ${isCover ? 'disabled' : ''}>\u00d7</button>
+        <button class="stage-del" title="\u5220\u9664" ${locked ? 'disabled' : ''}>\u00d7</button>
       `;
       const flowPill = row.querySelector('.stage-flow-pill');
       syncFlowPill(flowPill, stg);
       // name
       row.querySelector('.stage-name-input').addEventListener('input', (e) => {
+        if (isVote) return;
         stg.name = e.target.value.slice(0, 10) || '环节';
         // 没手动设过交锋/独立的环节，默认值跟着名字走
         syncFlowPill(flowPill, stg);
@@ -1121,7 +1261,7 @@
       flowPill.addEventListener('click', () => toggleDuelFlow(stg, flowPill));
       // type toggle
       row.querySelector('.stage-type-pill').addEventListener('click', (e) => {
-        if (stg.type === 'cover') return;
+        if (locked) return;
         stg.type = stg.type === 'duel' ? 'single' : 'duel';
         delete runtimeCache[stg.id];
         renderStagesList(); renderModeTabs(); updateFlowDots();
@@ -1130,7 +1270,7 @@
       });
       // duration
       row.querySelector('.stage-dur-input').addEventListener('change', (e) => {
-        if (stg.type === 'cover') return;
+        if (locked) return;
         const v = Math.max(10, parseInt(e.target.value) || 10);
         stg.duration = v; e.target.value = v;
         // invalidate cache so the new duration takes effect
@@ -1140,7 +1280,7 @@
       });
       // delete
       row.querySelector('.stage-del').addEventListener('click', () => {
-        if (stg.type === 'cover') return;
+        if (locked) return;
         if (state.stages.length <= 1) return;
         const wasCurrent = stg.id === state.currentId;
         state.stages = state.stages.filter(s => s.id !== stg.id);
@@ -1167,6 +1307,7 @@
         const item = state.stages.splice(from, 1)[0];
         state.stages.splice(to, 0, item);
         ensureCoverStage();
+        ensureVoteStages();
         renderStagesList(); renderModeTabs(); updateFlowDots();
         saveState();
       });
@@ -1178,6 +1319,7 @@
     const id = 's' + Date.now() + Math.floor(Math.random()*1000);
     state.stages.push({ id, name, type, duration: dur });
     ensureCoverStage();
+    ensureVoteStages();
     renderStagesList(); renderModeTabs(); updateFlowDots();
     saveState();
   }
@@ -1187,8 +1329,10 @@
     Object.keys(runtimeCache).forEach(k => delete runtimeCache[k]);
   }
 
+  // 预设 / 计时器存储从不带 vote-pre / vote-final：它们是「开启观众投票」这个开关
+  // 派生出来的，不是赛制的一部分，套用预设后 ensureVoteStages() 会按当前开关重新插回。
   function cloneStages(stages) {
-    return stages.map(s => {
+    return stages.filter(s => s.type !== 'vote-pre' && s.type !== 'vote-final').map(s => {
       const out = { id: s.id, name: s.name, type: s.type, duration: s.duration };
       if (isDuelFlow(s.duelFlow)) out.duelFlow = s.duelFlow;
       return out;
@@ -1318,6 +1462,7 @@
       return out;
     });
     ensureCoverStage();
+    ensureVoteStages();
     state.currentId = state.stages[0].id;
     clearRuntimeCache();
     resetTimer();
@@ -1342,6 +1487,7 @@
     state.running = false;
     state.stages = cloneStages(preset.stages);
     ensureCoverStage();
+    ensureVoteStages();
     state.currentId = state.stages.find(s => s.id === preset.currentId) ? preset.currentId : state.stages[0].id;
     clearRuntimeCache();
     resetTimer();
@@ -1391,7 +1537,7 @@
   const SHARE_MAX_STAGES = 40;
 
   function encodeFormat(stages) {
-    const rows = stages.filter(s => s.type !== 'cover').map(s => {
+    const rows = stages.filter(s => s.type !== 'cover' && s.type !== 'vote-pre' && s.type !== 'vote-final').map(s => {
       const row = [s.name, s.type === 'duel' ? 1 : 0, s.duration];
       // 交锋 / 独立写成实际生效的值，对方不依赖按环节名推断也能得到同样的行为
       if (s.type === 'duel') row.push(duelFlowOf(s) === 'solo' ? 1 : 0);
@@ -1454,7 +1600,7 @@
   }
 
   function shareFormat() {
-    const stages = state.stages.filter(s => s.type !== 'cover');
+    const stages = state.stages.filter(s => s.type !== 'cover' && s.type !== 'vote-pre' && s.type !== 'vote-final');
     if (!stages.length) { setShareStatus('还没有环节'); return; }
     const totalSeconds = stages.reduce((sum, stg) => sum + (Number(stg.duration) || 0) * (stg.type === 'duel' ? 2 : 1), 0);
     const text = '【辩论计时器赛制】' + stages.length + ' 环节 · ' + formatTime(totalSeconds) + '｜' + encodeFormat(stages);
@@ -1487,8 +1633,29 @@
   function openDrawer() { setStagePanel(false); drawer.classList.add('open'); overlay.classList.add('show'); }
   function closeDrawer() { drawer.classList.remove('open'); overlay.classList.remove('show'); }
 
+  /* ---------------- 开启观众投票 ----------------
+     只是把 vote-pre / vote-final 两个特殊环节和 vote-host.js 那一整套 UI
+     （图标按钮、票数条、投票面板）挂上/摘下，计票逻辑本身一直在 vote-host.js
+     里跑，这里只负责开关。initial=true 时只同步 VoteHost，不重复触发渲染
+     （init() 后面自己会 renderStagesList() / renderStage() 一次）。 */
+  function applyVoteEnabled(initial) {
+    if (window.VoteHost && typeof window.VoteHost.setEnabled === 'function') {
+      window.VoteHost.setEnabled(state.voteEnabled);
+    }
+    const swVote = document.getElementById('swVoteEnabled');
+    if (swVote) swVote.classList.toggle('on', state.voteEnabled);
+    if (initial) return;
+    if (!state.stages.find(s => s.id === state.currentId)) state.currentId = state.stages[0].id;
+    renderStagesList();
+    renderModeTabs();
+    updateFlowDots();
+    renderStage();
+    updateStartButton();
+    saveState();
+  }
+
   /* ---------------- Theme + font ---------------- */
-  const THEMES = ['arena', 'academy', 'soft', 'broadcast', 'terminal'];
+  const THEMES = ['neo', 'arena', 'academy', 'soft', 'broadcast', 'terminal'];
   function applyTheme() {
     // 旧版的 warm / dark / paper 已下线，存档里的旧值统一落到默认主题
     if (THEMES.indexOf(state.theme) < 0) state.theme = THEMES[0];
@@ -1515,6 +1682,7 @@
     document.getElementById('volumeRange').value = pct;
     document.getElementById('volumeValue').textContent = pct + '%';
     document.getElementById('swAutoFlow').classList.toggle('on', state.autoFlow);
+    document.getElementById('swVoteEnabled').classList.toggle('on', state.voteEnabled);
     const iconSound = document.getElementById('iconSound');
     const btnSound = document.getElementById('btnSound');
     btnSound.classList.toggle('active', state.sound);
@@ -1635,6 +1803,11 @@
     document.getElementById('swAutoFlow').addEventListener('click', () => {
       state.autoFlow = !state.autoFlow; applyInputs(); saveState();
     });
+    document.getElementById('swVoteEnabled').addEventListener('click', () => {
+      state.voteEnabled = !state.voteEnabled;
+      ensureVoteStages();
+      applyVoteEnabled();
+    });
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && isStagePanelOpen()) { setStagePanel(false); return; }
@@ -1667,6 +1840,7 @@
 
     // 窗口大小、全屏、网页字体加载完成都会改变队名可用宽度或字宽
     if (typeof window.addEventListener === 'function') {
+      window.addEventListener('vote:update', onVoteUpdate);
       window.addEventListener('resize', fitCoverTeamNames);
       window.addEventListener('resize', () => scrollTabsToActive(true));
     }
@@ -1680,14 +1854,16 @@
   // 之前，否则抽屉里每一行闭包住的都是已经被丢弃的环节对象，
   // 页面刚打开时的第一次改名/改时长/换类型会全部丢失。
   ensureCoverStage();
+  ensureVoteStages();
   if (!state.stages.find(s => s.id === state.currentId)) state.currentId = state.stages[0].id;
+  applyVoteEnabled(true);
   applyTheme();
   applyInputs();
   loadBackground();
   renderStagesList();
   renderPresetList();
   renderModeTabs();
-  if (curMode() === 'cover') {
+  if (isTimerless(curMode())) {
     state.remaining = 0;
   } else if (curMode() === 'duel') {
     state.duel.pro = curDuration();

@@ -15,6 +15,14 @@
     --tweak-质询: 90;
     --tweak-对辩: 120;
     /*EDITMODE-END*/
+    --vote-bar-reserve: 0px;
+  }
+
+  /* 票数条显示时，双计时的高度公式（下面 .duel 规则）要让出这部分空间，
+     单计时页也要把 main 顶部内边距让出同样的量，否则矮屏幕 / 宽屏下数字区域
+     会被挤到和票数条重叠（票数条实测高度 + 下间距约 50～55px，留一点余量）。 */
+  body:has(.vote-ratio-bar:not([hidden])) {
+    --vote-bar-reserve: 64px;
   }
 
   /* Warm theme (default) */
@@ -1327,6 +1335,12 @@ main {
   min-width: 0;
 }
 
+/* 票数条显示时，它基本占满原来 main 顶部内边距留出的空当，所以把顶部内边距
+   让出来给它，而不是在原有内边距之外再加高度——避免把计时内容往下挤出可用区域 */
+body:has(.vote-ratio-bar:not([hidden])) main {
+  padding-top: max(0px, clamp(18px, 4vw, 48px) - var(--vote-bar-reserve, 0px)) !important;
+}
+
 .stage,
 .single-timer {
   min-height: 0;
@@ -1338,6 +1352,42 @@ main {
   justify-content: center !important;
   gap: clamp(14px, 2.2vh, 26px) !important;
   padding: 0 !important;
+}
+
+/* 票数条显示时，单计时的数字本身不缩（保持和不开投票时一样大），只收紧
+   辩题、票数条、环节名和进度条周围的纵向留白，把票数条占掉的高度让出来 */
+body:has(.vote-ratio-bar:not([hidden])) .brand-topic {
+  font-size: clamp(16px, 1.6vw, 20px) !important;
+  line-height: 1.1 !important;
+  padding-block: 2px !important;
+}
+body:has(.vote-ratio-bar:not([hidden])) .vote-ratio-bar {
+  margin-bottom: clamp(2px, 0.6vh, 6px) !important;
+  padding-block: clamp(4px, 0.8vh, 8px) !important;
+}
+body:has(.vote-ratio-bar:not([hidden])) .stage-single .single-timer {
+  gap: clamp(2px, 0.8vh, 10px) !important;
+}
+body:has(.vote-ratio-bar:not([hidden])) .stage-single .single-label {
+  font-size: clamp(16px, 2.2vw, 30px) !important;
+  line-height: 1 !important;
+}
+body:has(.vote-ratio-bar:not([hidden])) .stage-single .timer-actions {
+  margin-top: clamp(0px, 0.4vh, 6px) !important;
+}
+body:has(.vote-ratio-bar:not([hidden])) .stage-single .progress-wrap {
+  gap: clamp(2px, 0.6vh, 8px) !important;
+}
+body:has(.vote-ratio-bar:not([hidden])) .stage-single .progress-meta {
+  font-size: 11px !important;
+}
+body:has(.vote-ratio-bar:not([hidden])) .stage-duel .duel {
+  height: 100% !important;
+  min-height: 0 !important;
+}
+body:has(.vote-ratio-bar:not([hidden])) .stage-duel .duel-panel {
+  padding-block: clamp(12px, 2.2vh, 32px) !important;
+  gap: clamp(6px, 1.4vh, 16px) !important;
 }
 
 .single-label {
@@ -1501,7 +1551,7 @@ footer {
   flex: 0 1 auto !important;
   min-height: 0;
   width: min(100%, 1760px) !important;
-  height: min(680px, 70vh, calc(100vh - 190px)) !important;
+  height: min(680px, calc(70vh - var(--vote-bar-reserve)), calc(100vh - 190px - var(--vote-bar-reserve))) !important;
   margin: auto !important;
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -2386,7 +2436,8 @@ body[data-theme="arena"],
 body[data-theme="academy"],
 body[data-theme="soft"],
 body[data-theme="broadcast"],
-body[data-theme="terminal"] {
+body[data-theme="terminal"],
+body[data-theme="neo"] {
   --bg: var(--vf-paper);
   --bg-2: var(--vf-paper-soft);
   --bg-3: var(--vf-track);
@@ -2408,6 +2459,7 @@ body[data-theme="terminal"] {
 .chip[data-theme="soft"] { background: #eef0ff !important; color: #5468ff !important; border-color: #c9cffc !important; }
 .chip[data-theme="broadcast"] { background: linear-gradient(105deg, #1f5fe0 50%, #e23a2e 50%) !important; color: #fff !important; border-color: #ffd400 !important; }
 .chip[data-theme="terminal"] { background: #050a06 !important; color: #39ff88 !important; border-color: #1c5c34 !important; font-family: Consolas, monospace !important; }
+.chip[data-theme="neo"] { background: #ffe600 !important; color: #000 !important; border: 2px solid #000 !important; font-weight: 800 !important; }
 
 /* 1 · 赛场之夜 Arena — 深色赛事记分牌：深蓝夜色底，正方蓝 / 反方橙，数字发光 */
 html body[data-theme="arena"] {
@@ -3344,8 +3396,257 @@ html body[data-theme="terminal"] .brand-mark { width: 210px !important; }
 html body[data-theme="terminal"] .brand-mark::before { white-space: nowrap !important; }
 html body[data-theme="terminal"] .brand-mark::after { top: 26px !important; white-space: nowrap !important; }
 
+/* 6 · 新野兽派 Neo-Brutalism — 奶白卡片 + 全黑粗边框 + 无虚化硬投影，正方电光蓝 / 反方亮粉，黄色点缀，字重拉满 */
+html body[data-theme="neo"] {
+  --vf-paper: #fffdf4;
+  --vf-paper-soft: #fff1a6;
+  --vf-ink: #0a0a0a;
+  --vf-muted: #333333;
+  --vf-faint: #6e6e6e;
+  --vf-line: #000000;
+  --vf-track: #e7e2d2;
+  --vf-warn: #ff1f4d;
+  --lk-pro: #0040ff;
+  --lk-con: #ff2d78;
+  --lk-hi: #ffe600;
+  --lk-shadow: 3px 3px 0 #000;
+  --lk-shadow-lg: 8px 8px 0 #000;
+  --lk-num: "Arial Black", "Helvetica Neue", "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", sans-serif;
+  --lk-ui: "Helvetica Neue", Arial, "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", sans-serif;
+}
 
-/* 主题有五个：标签单独一行，色卡自动换行，文字不折断 */
+html body[data-theme="neo"] { background: var(--lk-hi) !important; font-family: var(--lk-ui) !important; }
+html body[data-theme="neo"] .app {
+  border: 4px solid #000 !important;
+  border-radius: 2px !important;
+  background: var(--vf-paper) !important;
+  box-shadow: var(--lk-shadow-lg) !important;
+}
+
+/* brand：粗黑字 + 黄底色块 */
+html body[data-theme="neo"] .brand-mark::before, html body[data-theme="neo"] .brand-mark::after {
+  font-family: var(--lk-num) !important;
+  font-weight: 900 !important;
+  color: var(--vf-ink) !important;
+}
+html body[data-theme="neo"] .brand-mark::after {
+  background: var(--lk-hi) !important;
+  color: #000 !important;
+  border: 2px solid #000 !important;
+  padding: 1px 6px !important;
+  left: 0 !important;
+}
+html body[data-theme="neo"] .brand::before, html body[data-theme="neo"] .brand::after { background: #000 !important; }
+html body[data-theme="neo"] .brand-topic { color: var(--vf-muted) !important; font-weight: 700 !important; }
+
+/* 环节导航：方块色卡标出当前环节 */
+html body[data-theme="neo"] .mode-tabs { column-gap: 8px !important; }
+html body[data-theme="neo"] .mode-tab {
+  border: 2px solid #000 !important;
+  border-radius: 2px !important;
+  padding: 6px 14px !important;
+  background: #fff !important;
+  color: var(--vf-ink) !important;
+  font-weight: 700 !important;
+}
+html body[data-theme="neo"] .mode-tab:hover { background: var(--vf-paper-soft) !important; }
+html body[data-theme="neo"] .mode-tab.active {
+  background: var(--lk-pro) !important;
+  color: #fff !important;
+  font-weight: 800 !important;
+}
+html body[data-theme="neo"] .icon-btn { color: var(--vf-ink) !important; }
+
+/* 单计时 */
+html body[data-theme="neo"] .single-label {
+  display: inline-block;
+  background: var(--lk-hi) !important;
+  color: #000 !important;
+  border: 2px solid #000 !important;
+  font-weight: 800 !important;
+  font-size: clamp(16px, 1.8vw, 24px) !important;
+  padding: 3px 16px;
+  align-self: center;
+}
+html body[data-theme="neo"] .single-time {
+  font-family: var(--lk-num) !important;
+  font-weight: 900 !important;
+  color: var(--vf-ink) !important;
+  border: 0 !important;
+}
+html body[data-theme="neo"] .progress-meta { color: var(--vf-muted) !important; font-weight: 700 !important; }
+html body[data-theme="neo"] .progress-bar, html body[data-theme="neo"] .duel-progress {
+  height: 10px !important;
+  border-radius: 0 !important;
+  background: var(--vf-track) !important;
+  border: 2px solid #000 !important;
+}
+html body[data-theme="neo"] .progress-fill { background: var(--lk-pro) !important; }
+
+/* 按钮：粗边框 + 硬投影，按下时贴到投影底 */
+html body[data-theme="neo"] .btn, html body[data-theme="neo"] .timer-action-btn {
+  border: 2px solid #000 !important;
+  border-radius: 2px !important;
+  padding: 8px 18px !important;
+  color: var(--vf-ink) !important;
+  background: #fff !important;
+  font-weight: 700 !important;
+  box-shadow: var(--lk-shadow) !important;
+  transition: transform 0.08s ease, box-shadow 0.08s ease !important;
+}
+html body[data-theme="neo"] .btn:hover, html body[data-theme="neo"] .timer-action-btn:hover { background: var(--vf-paper-soft) !important; }
+html body[data-theme="neo"] .btn:active, html body[data-theme="neo"] .timer-action-btn:active {
+  transform: translate(3px, 3px) !important;
+  box-shadow: 0 0 0 #000 !important;
+}
+html body[data-theme="neo"] .btn-primary {
+  background: var(--lk-pro) !important;
+  color: #fff !important;
+  min-width: 110px !important;
+}
+html body[data-theme="neo"] .btn-primary:hover { background: #1a54ff !important; color: #fff !important; }
+
+/* 环节进度：黑边方块 */
+html body[data-theme="neo"] .flow-label { color: var(--vf-muted) !important; font-weight: 700 !important; }
+html body[data-theme="neo"] .flow-dot { width: 10px !important; height: 10px !important; border-radius: 0 !important; background: #fff !important; border: 1.5px solid #000 !important; }
+html body[data-theme="neo"] .flow-dot.done { background: var(--vf-faint) !important; }
+html body[data-theme="neo"] .flow-dot.current { background: var(--lk-hi) !important; }
+
+/* 双计时：粗边框卡片，当前发言方用本方颜色描边（内嵌描边，不外溢，避免和相邻面板重叠） */
+html body[data-theme="neo"] .duel { border: 0 !important; gap: 14px !important; }
+html body[data-theme="neo"] .duel-panel {
+  border: 2px solid #000 !important;
+  border-radius: 2px !important;
+  background: #fff !important;
+}
+html body[data-theme="neo"] .duel-panel[data-side="pro"] { border-right: 2px solid #000 !important; }
+html body[data-theme="neo"] .duel-panel.active[data-side="pro"] { background: #eaf0ff !important; box-shadow: inset 0 0 0 4px var(--lk-pro) !important; }
+html body[data-theme="neo"] .duel-panel.active[data-side="con"] { background: #ffeaf2 !important; box-shadow: inset 0 0 0 4px var(--lk-con) !important; }
+html body[data-theme="neo"] .duel-panel.inactive { opacity: 0.55 !important; }
+html body[data-theme="neo"] .duel-side-label { font-weight: 800 !important; letter-spacing: 0.08em !important; }
+html body[data-theme="neo"] .duel-panel[data-side="pro"] .duel-side-label, html body[data-theme="neo"] .duel-panel[data-side="pro"] .duel-side-name { color: var(--lk-pro) !important; }
+html body[data-theme="neo"] .duel-panel[data-side="con"] .duel-side-label, html body[data-theme="neo"] .duel-panel[data-side="con"] .duel-side-name { color: var(--lk-con) !important; }
+html body[data-theme="neo"] .duel-side-name { font-weight: 900 !important; }
+html body[data-theme="neo"] .duel-time { font-family: var(--lk-num) !important; font-weight: 900 !important; color: var(--vf-ink) !important; }
+html body[data-theme="neo"] .duel-panel[data-side="pro"] .duel-progress-fill { background: var(--lk-pro) !important; }
+html body[data-theme="neo"] .duel-panel[data-side="con"] .duel-progress-fill { background: var(--lk-con) !important; }
+html body[data-theme="neo"] .duel-reset-btn { color: var(--vf-muted) !important; font-weight: 700 !important; }
+html body[data-theme="neo"] .duel-divider {
+  width: 60px !important; height: 60px !important;
+  border-radius: 2px !important;
+  background: var(--lk-hi) !important;
+  border: 3px solid #000 !important;
+  color: #000 !important;
+  font-weight: 900 !important;
+  font-size: 13px !important;
+  box-shadow: var(--lk-shadow) !important;
+}
+html body[data-theme="neo"] .duel-divider:hover { background: #fff !important; }
+
+/* 首页 */
+html body[data-theme="neo"] .cover-page {
+  --cover-bg: var(--vf-paper);
+  --cover-fg: var(--vf-ink);
+  --cover-pro: var(--lk-pro);
+  --cover-con: var(--lk-con);
+  border: 4px solid #000;
+  border-radius: 2px !important;
+  box-shadow: var(--lk-shadow-lg) !important;
+}
+html body[data-theme="neo"] .cover-match-input { font-family: var(--lk-num) !important; font-weight: 800 !important; color: var(--vf-muted) !important; }
+html body[data-theme="neo"] .cover-topic-input { font-family: var(--lk-ui) !important; font-weight: 900 !important; }
+html body[data-theme="neo"] .cover-title-rule { height: 6px !important; border-radius: 0 !important; background: var(--lk-hi) !important; border: 2px solid #000; }
+html body[data-theme="neo"] .cover-team-tag { border: 2px solid currentColor !important; border-radius: 2px !important; font-weight: 800 !important; }
+html body[data-theme="neo"] .cover-team-pro .cover-team-tag { background: #eaf0ff; }
+html body[data-theme="neo"] .cover-team-con .cover-team-tag { background: #ffeaf2; }
+html body[data-theme="neo"] .cover-vs {
+  width: 48px; height: 48px; border-radius: 2px;
+  display: grid; place-items: center;
+  background: #fff; color: #000 !important;
+  border: 3px solid #000;
+  font-weight: 900 !important;
+}
+
+/* 首页卡片随可用高度收缩，底边不再被裁掉；外框投影不被 .stage-cover 裁掉 */
+html body[data-theme="neo"] .cover-page { min-height: 0 !important; height: 100% !important; }
+html body[data-theme="neo"] .stage-cover { padding: 10px 18px 24px; }
+
+/* 设置抽屉 / 投票面板：方角粗边框按钮，呼应整体风格 */
+html body[data-theme="neo"] .drawer { border-left: 3px solid #000 !important; }
+html body[data-theme="neo"] .drawer .chip {
+  border: 1.5px solid #000 !important;
+  border-radius: 2px !important;
+  background: #fff !important;
+  color: var(--vf-ink) !important;
+  font-weight: 600 !important;
+}
+html body[data-theme="neo"] .drawer .chip.active {
+  background: var(--lk-hi) !important;
+  border-width: 2px !important;
+  box-shadow: var(--lk-shadow) !important;
+  font-weight: 800 !important;
+}
+html body[data-theme="neo"] .drawer .chip-group { background: var(--vf-paper-soft) !important; border-radius: 2px !important; }
+html body[data-theme="neo"] .drawer .preset-new-btn {
+  border: 2px solid #000 !important;
+  border-radius: 2px !important;
+  background: var(--lk-hi) !important;
+  color: #000 !important;
+  font-weight: 800 !important;
+  box-shadow: var(--lk-shadow) !important;
+}
+html body[data-theme="neo"] .drawer .input,
+html body[data-theme="neo"] .drawer .stage-row,
+html body[data-theme="neo"] .drawer .preset-item,
+html body[data-theme="neo"] .drawer .background-preview { border-radius: 2px !important; border: 1.5px solid #000 !important; }
+
+/* 票数条 + 投票结果：黑边 + 硬投影，正方蓝 / 反方粉一眼分清 */
+html body[data-theme="neo"] .vote-ratio-bar {
+  border: 3px solid #000 !important;
+  border-radius: 2px !important;
+  background: #fff !important;
+  box-shadow: var(--lk-shadow) !important;
+  font-weight: 700 !important;
+}
+html body[data-theme="neo"] .vrb-count { font-weight: 900 !important; }
+html body[data-theme="neo"] .vrb-pro { color: var(--lk-pro) !important; }
+html body[data-theme="neo"] .vrb-con { color: var(--lk-con) !important; }
+html body[data-theme="neo"] .vrb-track {
+  border: 2px solid #000 !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+}
+html body[data-theme="neo"] .vrb-fill-pro { background: var(--lk-pro) !important; }
+html body[data-theme="neo"] .vrb-fill-con { background: var(--lk-con) !important; }
+html body[data-theme="neo"] .vote-qr-wrap { border: 2px solid #000 !important; border-radius: 2px !important; }
+html body[data-theme="neo"] .vote-result-cell {
+  border: 2px solid #000 !important;
+  border-radius: 2px !important;
+  background: #fff !important;
+  box-shadow: var(--lk-shadow) !important;
+}
+html body[data-theme="neo"] .vote-result-cell:nth-child(1) { box-shadow: var(--lk-shadow), inset 4px 0 0 var(--lk-pro) !important; }
+html body[data-theme="neo"] .vote-result-cell:nth-child(2) { box-shadow: var(--lk-shadow), inset 4px 0 0 var(--lk-con) !important; }
+html body[data-theme="neo"] .vote-result-cell .vrc-value { font-weight: 900 !important; }
+
+/* 二维码全屏：黄底黑边，呼应整体 Neo-Brutalism 风格 */
+html body[data-theme="neo"] .vote-qr-fullscreen { background: var(--vf-paper) !important; }
+html body[data-theme="neo"] .vqf-room {
+  background: var(--lk-hi) !important;
+  color: #000 !important;
+  border: 3px solid #000 !important;
+  border-radius: 2px !important;
+  padding: 6px 22px !important;
+  font-weight: 900 !important;
+}
+html body[data-theme="neo"] .vqf-qr {
+  border: 4px solid #000 !important;
+  border-radius: 2px !important;
+  box-shadow: var(--lk-shadow-lg) !important;
+}
+html body[data-theme="neo"] .vqf-url { font-weight: 700 !important; }
+
+/* 主题有六个：标签单独一行，色卡自动换行，文字不折断 */
 .field-row:has(#themeGroup) { flex-direction: column !important; align-items: flex-start !important; gap: 10px !important; }
 #themeGroup { flex-wrap: wrap !important; gap: 8px !important; }
 #themeGroup .chip { white-space: nowrap !important; padding: 6px 12px !important; }
@@ -3526,7 +3827,8 @@ html body[data-theme] .mode-more[aria-expanded="true"] { background: var(--vf-pa
   transition-delay: 0s;
 }
 html body[data-theme="broadcast"] .stage-panel,
-html body[data-theme="terminal"] .stage-panel { border-radius: 0; }
+html body[data-theme="terminal"] .stage-panel,
+html body[data-theme="neo"] .stage-panel { border-radius: 0; }
 .stage-panel-title {
   margin: 0 4px 10px;
   color: var(--vf-muted);
@@ -3567,6 +3869,7 @@ html body[data-theme="arena"],
 html body[data-theme="broadcast"] { --time-em: 2.6; }
 html body[data-theme="academy"] { --time-em: 2.8; }
 html body[data-theme="soft"] { --time-em: 2.75; }
+html body[data-theme="neo"] { --time-em: 3.3; }
 
 /* 手机浏览器的 100vh 把地址栏也算进去，底栏按钮会被挡住 */
 @supports (height: 100dvh) {
@@ -3874,9 +4177,371 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
   }
 }
 
+/* ========== 现场投票 ========== */
+/* 票数条：插在 main 里，紧跟在辩题下方、计时数字上方的空白处，跟着正常排版流走，
+   不用 fixed，不会盖住任何数字 / 标签 / 进度条 / 按钮。字号比旧版的底部小胶囊大得多，
+   投影到大屏上也能看清。 */
+.vote-ratio-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 2vw, 20px);
+  width: 100%;
+  max-width: min(760px, 92%);
+  margin: 0 auto clamp(8px, 1.6vh, 16px);
+  padding: clamp(6px, 1vh, 10px) clamp(14px, 2.4vw, 22px);
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--ink-2);
+  font-family: "JetBrains Mono", monospace;
+}
+.vote-ratio-bar[hidden] { display: none; }
+body[data-screen="cover"] .vote-ratio-bar { display: none !important; }
+.vrb-count {
+  flex: 0 0 auto;
+  font-weight: 800;
+  font-size: clamp(15px, 2.1vw, 25px);
+  line-height: 1.15;
+  white-space: nowrap;
+}
+.vrb-pro { color: var(--accent); }
+.vrb-con { color: var(--warn); }
+.vrb-track {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 48px;
+  height: clamp(9px, 1.5vh, 15px);
+  border-radius: 999px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.vrb-fill { height: 100%; transition: width 0.25s ease; }
+.vrb-fill-pro { background: var(--accent); }
+.vrb-fill-con { background: var(--warn); }
+
+/* 赛前 / 最终票数页：Neo-Brutalism 柱状图 */
+.stage-vote-pre,
+.stage-vote-final {
+  justify-content: stretch !important;
+  overflow: hidden !important;
+}
+.vote-page {
+  --vote-pro: var(--lk-pro, #0040ff);
+  --vote-con: var(--lk-con, #ff2d78);
+  --vote-line: var(--border-strong, var(--ink));
+  width: min(100%, 1120px);
+  height: 100%;
+  min-height: 0;
+  margin: 0 auto;
+  padding: clamp(10px, 2.4vh, 30px) clamp(12px, 4vw, 48px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  justify-content: safe center;
+  align-items: stretch;
+  gap: clamp(12px, 2.6vh, 30px);
+  color: var(--ink);
+  text-align: center;
+  overflow-y: auto;
+}
+.vote-page-head {
+  display: grid;
+  justify-items: center;
+  gap: clamp(4px, 1vh, 10px);
+}
+.vote-page-eyebrow {
+  color: var(--ink-3);
+  font-family: "JetBrains Mono", monospace;
+  font-size: clamp(10px, 1.2vw, 13px);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.vote-page-title {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--lk-ui, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif);
+  font-size: clamp(24px, 4vw, 52px);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1.05;
+}
+.vote-page-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 14px;
+  color: var(--ink-2);
+  font-family: "JetBrains Mono", monospace;
+  font-size: clamp(12px, 1.4vw, 17px);
+}
+.vote-page-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border: 1.5px solid var(--vote-line);
+  border-radius: 2px;
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.vote-page-total { font-weight: 700; }
+.vote-page-hint {
+  margin: 0;
+  color: var(--ink-3);
+  font-family: "JetBrains Mono", monospace;
+  font-size: clamp(11px, 1.2vw, 14px);
+  letter-spacing: 0.04em;
+}
+.vote-chart {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: min(100%, 880px);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(24px, 7vw, 120px);
+  align-items: stretch;
+  justify-items: center;
+}
+.vote-chart-col {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  align-items: end;
+  justify-items: center;
+  gap: clamp(4px, 1vh, 12px);
+}
+.vote-chart-count {
+  color: var(--ink);
+  font-family: var(--lk-num, "Arial Black", "Helvetica Neue", "Noto Sans SC", sans-serif);
+  font-size: clamp(40px, 7.5vw, 104px);
+  font-weight: 900;
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+}
+.vote-chart-pro .vote-chart-count { color: var(--vote-pro); }
+.vote-chart-con .vote-chart-count { color: var(--vote-con); }
+.vote-chart-track {
+  width: clamp(72px, 12vw, 150px);
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: flex-end;
+  border: 2px solid var(--vote-line);
+  border-radius: 2px;
+  background: var(--bg-2);
+  overflow: hidden;
+}
+.vote-chart-fill {
+  width: 100%;
+  min-height: 0;
+  background: var(--vote-pro);
+  transition: height 0.3s ease;
+}
+.vote-chart-con .vote-chart-fill { background: var(--vote-con); }
+.vote-chart-stance {
+  display: -webkit-box;
+  max-width: 100%;
+  color: var(--ink);
+  font-size: clamp(13px, 1.7vw, 22px);
+  font-weight: 800;
+  line-height: 1.25;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.vote-chart-delta {
+  color: var(--ink-2);
+  font-family: "JetBrains Mono", monospace;
+  font-size: clamp(14px, 1.8vw, 24px);
+  font-weight: 800;
+  line-height: 1;
+}
+
+html body[data-theme="neo"] .vote-chart-track {
+  border-width: 3px !important;
+  background: #fff !important;
+  box-shadow: var(--lk-shadow) !important;
+}
+html body[data-theme="neo"] .vote-page-status {
+  border-width: 2px !important;
+  box-shadow: var(--lk-shadow) !important;
+}
+
+@media (max-width: 760px) {
+  .vote-page {
+    gap: clamp(8px, 2vh, 16px);
+    padding: 6px 8px 10px;
+  }
+  .vote-page-title { font-size: clamp(20px, 7vw, 32px); }
+  .vote-chart { gap: clamp(16px, 6vw, 40px); }
+  .vote-chart-count { font-size: clamp(34px, 12vw, 64px); }
+  .vote-chart-track { width: clamp(58px, 18vw, 110px); }
+  .vote-chart-stance { font-size: clamp(12px, 4vw, 18px); }
+}
+
+@media (max-height: 640px) {
+  .vote-page {
+    gap: clamp(6px, 1.6vh, 16px);
+    padding-block: clamp(4px, 1.4vh, 12px);
+  }
+  .vote-page-title { font-size: clamp(20px, 3.4vw, 36px); }
+  .vote-chart-count { font-size: clamp(30px, 6vw, 72px); }
+  .vote-chart-stance { font-size: clamp(12px, 1.6vw, 18px); }
+}
+
+/* 二维码全屏展示：投给全场看，盖住一切（包括设置抽屉），点哪都能退出 */
+.vote-qr-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(16px, 3vh, 32px);
+  background: var(--bg);
+  color: var(--ink);
+  cursor: pointer;
+  padding: 24px;
+}
+.vote-qr-fullscreen[hidden] { display: none; }
+.vqf-room {
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 800;
+  font-size: clamp(26px, 5vw, 56px);
+  letter-spacing: 0.1em;
+}
+.vqf-qr {
+  background: #fff;
+  padding: clamp(14px, 2vw, 28px);
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.vqf-qr svg, .vqf-qr img, .vqf-qr table {
+  width: min(62vw, 62vh);
+  height: min(62vw, 62vh);
+  display: block;
+}
+.vqf-url {
+  font-family: "JetBrains Mono", monospace;
+  font-size: clamp(14px, 2.2vw, 24px);
+  color: var(--ink-2);
+  word-break: break-all;
+  max-width: 90vw;
+  text-align: center;
+}
+.vqf-hint {
+  font-size: clamp(12px, 1.4vw, 16px);
+  color: var(--ink-3);
+}
+
+.vote-drawer .vote-room-code {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+}
+.vote-drawer .vote-qr-outer {
+  display: flex;
+  justify-content: center;
+  margin: 10px 0;
+}
+.vote-drawer .vote-qr-wrap {
+  background: #fff;
+  padding: 10px;
+  border-radius: 12px;
+  display: inline-flex;
+  min-height: 132px;
+  min-width: 132px;
+  align-items: center;
+  justify-content: center;
+}
+.vote-drawer .vote-qr-wrap svg,
+.vote-drawer .vote-qr-wrap img,
+.vote-drawer .vote-qr-wrap table { width: 120px; height: 120px; }
+.vote-drawer #voteLinkInput { flex: 1 1 auto; width: auto; }
+.vote-drawer .vote-phase,
+.vote-drawer .vote-counts {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  color: var(--ink);
+}
+.vote-drawer .preset-hint code {
+  font-family: "JetBrains Mono", monospace;
+  background: var(--bg-2);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+.vote-result-box {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 4px;
+}
+.vote-result-cell {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-2);
+  padding: 10px 12px;
+}
+.vote-result-cell .vrc-label {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-family: "JetBrains Mono", monospace;
+}
+.vote-result-cell .vrc-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--ink);
+  font-family: "JetBrains Mono", monospace;
+  margin-top: 2px;
+}
+.vote-result-cell .vrc-delta {
+  font-size: 12px;
+  color: var(--ink-3);
+  margin-top: 2px;
+  font-family: "JetBrains Mono", monospace;
+}
+.vote-result-total {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+/* 关闭观众投票时彻底隐藏（hidden 属性压过 display 规则） */
+#btnVote[hidden],
+#voteRatioBar[hidden],
+#votePanel[hidden] { display: none !important; }
+
+/* 票数页本身就是大图表，不再重复显示顶部票数条；柱子保底高度，桌面端不被压扁 */
+body[data-screen="vote-pre"] .vote-ratio-bar,
+body[data-screen="vote-final"] .vote-ratio-bar { display: none !important; }
+.vote-chart { flex: 0 0 auto; }
+.vote-chart-col { height: auto; grid-template-rows: auto auto auto auto; }
+.vote-chart-track { height: clamp(80px, 17vh, 240px); min-height: 0; }
+
 </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js" defer></script>
+  <script src="config.js" defer></script>
 </head>
-<body data-theme="arena">
+<body data-theme="neo">
 <div class="app" id="app">
     <!-- Header -->
     <header>
@@ -3911,6 +4576,12 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
             <path d="M3 7V3h4M17 3h4v4M21 17v4h-4M7 21H3v-4"></path>
           </svg>
         </button>
+        <button class="icon-btn" id="btnVote" title="现场投票">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M9 11l3 3L22 4"></path>
+            <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
+          </svg>
+        </button>
         <button class="icon-btn" id="btnSettings" title="设置">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
             <circle cx="12" cy="12" r="3"></circle>
@@ -3922,6 +4593,15 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
 
     <!-- Main -->
     <main>
+      <!-- 票数条：插在辩题和计时数字之间的空白处，首页和未开票时不显示 -->
+      <div class="vote-ratio-bar" id="voteRatioBar" hidden aria-live="polite">
+        <span class="vrb-count vrb-pro" id="vrbPro"></span>
+        <div class="vrb-track" id="vrbTrack">
+          <div class="vrb-fill vrb-fill-pro" id="vrbFillPro"></div>
+          <div class="vrb-fill vrb-fill-con" id="vrbFillCon"></div>
+        </div>
+        <span class="vrb-count vrb-con" id="vrbCon"></span>
+      </div>
       <div class="stage" id="stage"></div>
     </main>
 
@@ -3993,7 +4673,8 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
       <div class="field-row">
         <span class="field-label">主题</span>
         <div class="chip-group" id="themeGroup">
-          <button class="chip active" data-theme="arena">赛场之夜</button>
+          <button class="chip active" data-theme="neo">Neo-Brutalism</button>
+          <button class="chip" data-theme="arena">赛场之夜</button>
           <button class="chip" data-theme="academy">学院典雅</button>
           <button class="chip" data-theme="soft">柔光卡片</button>
           <button class="chip" data-theme="broadcast">电视转播</button>
@@ -4104,6 +4785,10 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
         <span class="field-label">自动推进到下一环节</span>
         <div class="switch" id="swAutoFlow"></div>
       </div>
+      <div class="field-row">
+        <span class="field-label">开启观众投票</span>
+        <div class="switch" id="swVoteEnabled"></div>
+      </div>
       <div style="font-size:11px; color: var(--ink-3); line-height: 1.5; margin-top: 8px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em;" id="flowText"></div>
     </div>
 
@@ -4121,6 +4806,782 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
   </aside>
 
   <div class="flash" id="flash"></div>
+
+  <!-- Vote panel -->
+  <div class="overlay" id="voteOverlay"></div>
+  <aside class="drawer vote-drawer" id="votePanel">
+    <h3>
+      <span>现场投票</span>
+      <button class="icon-btn" id="voteClose">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12"></path>
+        </svg>
+      </button>
+    </h3>
+
+    <div class="drawer-section" id="voteConfigWarning" hidden>
+      <div class="drawer-section-label">提示</div>
+      <p class="preset-hint">投票功能还没有配置。复制 <code>config.example.js</code> 为 <code>config.js</code> 并填入 Supabase 信息，详见 VOTING.md。</p>
+    </div>
+
+    <div class="drawer-section" id="voteMainSection">
+      <div class="drawer-section-label">房间</div>
+      <div class="field-row">
+        <span class="field-label">房间码</span>
+        <span class="vote-room-code" id="voteRoomCode">——</span>
+      </div>
+      <div class="vote-qr-outer">
+        <div class="vote-qr-wrap" id="voteQrWrap"></div>
+      </div>
+      <div class="field-row">
+        <span class="field-label">链接</span>
+        <input type="text" class="input input-text" id="voteLinkInput" readonly>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+        <button class="chip" id="voteCopyLink" type="button">复制链接</button>
+        <button class="chip" id="voteQrFullscreenBtn" type="button">全屏二维码</button>
+        <button class="chip" id="voteNewRoom" type="button">新建房间</button>
+      </div>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-label">状态</div>
+      <div class="field-row">
+        <span class="field-label">阶段</span>
+        <span class="vote-phase" id="votePhase">未开始</span>
+      </div>
+      <div class="field-row">
+        <span class="field-label">票数</span>
+        <span class="vote-counts" id="voteCounts">正方 0 · 反方 0</span>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+        <button class="preset-new-btn" id="voteStartBtn" type="button">开始投票</button>
+        <button class="preset-new-btn" id="voteLockBaseline" type="button">锁定初始立场</button>
+        <button class="preset-new-btn" id="voteEndBtn" type="button">结束投票</button>
+        <button class="chip" id="voteResetBtn" type="button">重置</button>
+      </div>
+    </div>
+
+    <div class="drawer-section" id="voteResultSection" hidden>
+      <div class="drawer-section-label">结果</div>
+      <div id="voteResultBox" class="vote-result-box"></div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+        <button class="chip" id="voteExportJson" type="button">导出 JSON</button>
+        <button class="chip" id="voteExportCsv" type="button">导出 CSV</button>
+      </div>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-label">显示</div>
+      <div class="field-row">
+        <span class="field-label">在计时页顶显示票数条</span>
+        <div class="switch" id="voteSwRatioBar"></div>
+      </div>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-label">历史记录</div>
+      <div id="voteHistoryList" class="preset-list"></div>
+    </div>
+  </aside>
+
+  <!-- 二维码全屏展示：投给全场观众看，点任意位置或 Esc 退出 -->
+  <div class="vote-qr-fullscreen" id="voteQrFullscreen" hidden>
+    <div class="vqf-room" id="vqfRoom"></div>
+    <div class="vqf-qr" id="vqfQr"></div>
+    <div class="vqf-url" id="vqfUrl"></div>
+    <div class="vqf-hint">点击任意位置或按 Esc 退出</div>
+  </div>
+<script>
+/* vote-core.js — 纯函数计票逻辑，不依赖 DOM / 网络，浏览器和 Node 都能跑。
+ * 浏览器：<script src="vote-core.js"> 之后用 window.VoteCore。
+ * Node：const VoteCore = require('./vote-core.js')。
+ */
+(function () {
+  'use strict';
+
+  // 同一观众在这个时间窗内重复投同一边，视为重发/抖动，不计入变化。
+  var DEDUPE_MS = 300;
+
+  function createTally() {
+    return { votes: new Map() };
+  }
+
+  function isValidSide(side) {
+    return side === 'pro' || side === 'con';
+  }
+
+  /**
+   * 把一条 {type:'vote', voter_id, side, ts} 消息计入 tally。
+   * Map 按 voter_id 覆盖，天然支持“改票”。
+   * 返回 true 表示真正改变了计票结果，false 表示被丢弃（陈旧 / 抖动重复）。
+   */
+  function applyVote(tally, msg) {
+    if (!tally || !msg || msg.type !== 'vote') return false;
+    if (typeof msg.voter_id !== 'string' || !msg.voter_id) return false;
+    if (!isValidSide(msg.side)) return false;
+    var ts = typeof msg.ts === 'number' && isFinite(msg.ts) ? msg.ts : Date.now();
+    var prev = tally.votes.get(msg.voter_id);
+    if (prev) {
+      if (ts < prev.ts) return false; // 比已记录的还旧，丢弃
+      if (prev.side === msg.side && ts - prev.ts < DEDUPE_MS) return false; // 短时间内的重复重发
+    }
+    tally.votes.set(msg.voter_id, { side: msg.side, ts: ts });
+    return true;
+  }
+
+  function counts(tally) {
+    var pro = 0, con = 0;
+    if (tally && tally.votes) {
+      tally.votes.forEach(function (v) {
+        if (v.side === 'pro') pro++;
+        else if (v.side === 'con') con++;
+      });
+    }
+    return { pro: pro, con: con, total: pro + con };
+  }
+
+  function snapshotBaseline(tally) {
+    var c = counts(tally);
+    return { pro: c.pro, con: c.con };
+  }
+
+  function buildResult(room, baseline, tally) {
+    var final = counts(tally);
+    var base = baseline || { pro: 0, con: 0 };
+    var basePro = base.pro || 0;
+    var baseCon = base.con || 0;
+    return {
+      room: room || '',
+      baseline: { pro: basePro, con: baseCon },
+      final: { pro: final.pro, con: final.con },
+      delta: { pro: final.pro - basePro, con: final.con - baseCon },
+      total: final.total,
+      timestamp: Date.now(),
+    };
+  }
+
+  function csvField(v) {
+    var s = String(v == null ? '' : v);
+    if (/[",\r\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+
+  function toCSV(result) {
+    var headers = ['room', 'baseline_pro', 'baseline_con', 'final_pro', 'final_con', 'delta_pro', 'delta_con', 'total', 'timestamp'];
+    var row = [
+      result.room,
+      result.baseline.pro, result.baseline.con,
+      result.final.pro, result.final.con,
+      result.delta.pro, result.delta.con,
+      result.total,
+      new Date(result.timestamp).toISOString(),
+    ];
+    return headers.map(csvField).join(',') + '\r\n' + row.map(csvField).join(',') + '\r\n';
+  }
+
+  function toJSON(result) {
+    return JSON.stringify(result, null, 2);
+  }
+
+  function serializeVotes(tally) {
+    var arr = [];
+    if (tally && tally.votes) {
+      tally.votes.forEach(function (v, voterId) {
+        arr.push([voterId, v.side, v.ts]);
+      });
+    }
+    return arr;
+  }
+
+  function restoreVotes(arr) {
+    var tally = createTally();
+    if (Array.isArray(arr)) {
+      arr.forEach(function (entry) {
+        if (Array.isArray(entry) && entry.length >= 3 && isValidSide(entry[1])) {
+          tally.votes.set(entry[0], { side: entry[1], ts: entry[2] });
+        }
+      });
+    }
+    return tally;
+  }
+
+  var VoteCore = {
+    DEDUPE_MS: DEDUPE_MS,
+    createTally: createTally,
+    applyVote: applyVote,
+    counts: counts,
+    snapshotBaseline: snapshotBaseline,
+    buildResult: buildResult,
+    toCSV: toCSV,
+    toJSON: toJSON,
+    serializeVotes: serializeVotes,
+    restoreVotes: restoreVotes,
+  };
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = VoteCore;
+  }
+  if (typeof window !== 'undefined') {
+    window.VoteCore = VoteCore;
+  }
+})();
+
+</script>
+<script>
+/* vote-host.js — 主持端：生成房间 / 二维码，订阅 Supabase Realtime Broadcast 计票，
+ * 维护投票阶段，导出结果。单独的 IIFE，不依赖 app.js，也不往 app.js 里加钩子。
+ */
+(function () {
+  'use strict';
+
+  var VC = window.VoteCore;
+  if (!VC) { console.error('vote-host.js: VoteCore 未加载'); return; }
+
+  var STORAGE_KEY = 'debate-timer-v2-vote';
+  var TIMER_STORAGE_KEY = 'debate-timer-v2';
+  var HISTORY_KEY = 'debate-timer-v2-vote-history';
+  var ROOM_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  var BACKOFF_MAX = 15000;
+
+  function readTimerVoteEnabled() {
+    var saved = loadJSON(TIMER_STORAGE_KEY, null);
+    return !!(saved && saved.voteEnabled);
+  }
+
+  function genRoomCode() {
+    var s = '';
+    for (var i = 0; i < 6; i++) s += ROOM_CHARS[Math.floor(Math.random() * ROOM_CHARS.length)];
+    return s;
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function fmtDelta(n) {
+    if (n > 0) return '+' + n;
+    if (n < 0) return '−' + Math.abs(n);
+    return '+0';
+  }
+
+  function loadJSON(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key);
+      if (!raw) return fallback;
+      var v = JSON.parse(raw);
+      return v == null ? fallback : v;
+    } catch (e) { return fallback; }
+  }
+  function saveJSON(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+  }
+
+  /* ---------------- State ---------------- */
+  var savedSession = loadJSON(STORAGE_KEY, null);
+  var state = {
+    enabled: readTimerVoteEnabled(),
+    room: (savedSession && savedSession.room) || genRoomCode(),
+    phase: (savedSession && savedSession.phase) || 'idle', // idle | collecting | live | closed
+    baseline: (savedSession && savedSession.baseline) || null,
+    tally: (savedSession && savedSession.votes) ? VC.restoreVotes(savedSession.votes) : VC.createTally(),
+    ratioBarOn: savedSession ? !!savedSession.ratioBarOn : true,
+    result: (savedSession && savedSession.result) || null,
+    history: loadJSON(HISTORY_KEY, []),
+  };
+
+  function persistSession() {
+    saveJSON(STORAGE_KEY, {
+      room: state.room,
+      phase: state.phase,
+      baseline: state.baseline,
+      votes: VC.serializeVotes(state.tally),
+      ratioBarOn: state.ratioBarOn,
+      result: state.result,
+      updatedAt: Date.now(),
+    });
+  }
+
+  /* ---------------- DOM ---------------- */
+  var dom = {};
+  function cacheDom() {
+    [
+      'btnVote', 'votePanel', 'voteOverlay', 'voteClose',
+      'voteConfigWarning', 'voteMainSection',
+      'voteRoomCode', 'voteQrWrap', 'voteLinkInput', 'voteCopyLink', 'voteNewRoom',
+      'votePhase', 'voteCounts', 'voteStartBtn', 'voteLockBaseline', 'voteEndBtn', 'voteResetBtn',
+      'voteResultSection', 'voteResultBox', 'voteExportJson', 'voteExportCsv',
+      'voteSwRatioBar', 'voteHistoryList',
+      'voteRatioBar', 'vrbPro', 'vrbCon', 'vrbFillPro', 'vrbFillCon',
+      'voteQrFullscreenBtn', 'voteQrFullscreen', 'vqfRoom', 'vqfQr', 'vqfUrl',
+    ].forEach(function (id) { dom[id] = document.getElementById(id); });
+  }
+
+  function hasConfig() {
+    var cfg = window.DEBATE_VOTE_CONFIG || {};
+    return !!(cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY && window.supabase && typeof window.supabase.createClient === 'function');
+  }
+
+  function defaultVoteBaseUrl() {
+    var dir = location.pathname.replace(/[^/]*$/, '');
+    return location.origin + dir + 'vote.html';
+  }
+  function voteBaseUrl() {
+    var cfg = window.DEBATE_VOTE_CONFIG || {};
+    var v = (cfg.VOTE_BASE_URL || '').trim();
+    return v || defaultVoteBaseUrl();
+  }
+  function voteUrlFor(room) {
+    var base = voteBaseUrl().replace(/\/+$/, '');
+    var sep = base.indexOf('?') >= 0 ? '&' : '?';
+    return base + sep + 'room=' + encodeURIComponent(room);
+  }
+
+  function renderQrInto(wrap, url) {
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    if (typeof window.qrcode !== 'function') {
+      wrap.textContent = '二维码库加载失败，用下方链接';
+      return;
+    }
+    try {
+      var qr = window.qrcode(0, 'M');
+      qr.addData(url);
+      qr.make();
+      wrap.innerHTML = qr.createSvgTag({ scalable: true });
+    } catch (e) {
+      wrap.textContent = '二维码生成失败';
+    }
+  }
+
+  function renderRoomInfo() {
+    var url = voteUrlFor(state.room);
+    if (dom.voteRoomCode) dom.voteRoomCode.textContent = state.room;
+    if (dom.voteLinkInput) dom.voteLinkInput.value = url;
+    renderQrInto(dom.voteQrWrap, url);
+    if (dom.voteQrFullscreen && !dom.voteQrFullscreen.hidden) renderFullscreenQr();
+  }
+
+  function renderFullscreenQr() {
+    var url = voteUrlFor(state.room);
+    if (dom.vqfRoom) dom.vqfRoom.textContent = '房间 ' + state.room;
+    if (dom.vqfUrl) dom.vqfUrl.textContent = url;
+    renderQrInto(dom.vqfQr, url);
+  }
+
+  function openQrFullscreen() {
+    if (!dom.voteQrFullscreen) return;
+    renderFullscreenQr();
+    dom.voteQrFullscreen.hidden = false;
+  }
+  function closeQrFullscreen() {
+    if (!dom.voteQrFullscreen) return;
+    dom.voteQrFullscreen.hidden = true;
+  }
+
+  var PHASE_LABEL = {
+    idle: '未开始',
+    collecting: '投票中（初始立场）',
+    live: '投票中（直播）',
+    closed: '已结束',
+  };
+
+  function updateRatioBar() {
+    var bar = dom.voteRatioBar;
+    if (!bar) return;
+    var show = state.enabled && state.ratioBarOn && state.phase !== 'idle';
+    if (!show) { bar.hidden = true; return; }
+    var c = VC.counts(state.tally);
+    var showDelta = !!state.baseline;
+    var proText = '正方 ' + c.pro + (showDelta ? ' (' + fmtDelta(c.pro - state.baseline.pro) + ')' : '');
+    var conText = '反方 ' + c.con + (showDelta ? ' (' + fmtDelta(c.con - state.baseline.con) + ')' : '');
+    if (dom.vrbPro) dom.vrbPro.textContent = proText;
+    if (dom.vrbCon) dom.vrbCon.textContent = conText;
+    // 票数条里的占比条：0 票时各占一半，避免看起来像"没有数据"
+    var proPct = c.total > 0 ? (c.pro / c.total * 100) : 50;
+    var conPct = c.total > 0 ? (c.con / c.total * 100) : 50;
+    if (dom.vrbFillPro) dom.vrbFillPro.style.width = proPct + '%';
+    if (dom.vrbFillCon) dom.vrbFillCon.style.width = conPct + '%';
+    bar.hidden = false;
+  }
+
+  function updateCountsUI() {
+    var c = VC.counts(state.tally);
+    if (dom.voteCounts) dom.voteCounts.textContent = '正方 ' + c.pro + ' · 反方 ' + c.con + '（共 ' + c.total + ' 人）';
+    updateRatioBar();
+  }
+
+  function notifyUpdate() {
+    try { window.dispatchEvent(new CustomEvent('vote:update')); } catch (e) {}
+  }
+
+  function getSnapshot() {
+    var c = VC.counts(state.tally);
+    return {
+      counts: { pro: c.pro, con: c.con },
+      baseline: state.baseline ? { pro: state.baseline.pro, con: state.baseline.con } : null,
+      phase: state.phase,
+    };
+  }
+
+  function setEnabled(on) {
+    state.enabled = !!on;
+    if (dom.btnVote) dom.btnVote.hidden = !state.enabled;
+    if (dom.votePanel) dom.votePanel.hidden = !state.enabled;
+    if (!state.enabled) {
+      closeVotePanel();
+      if (dom.voteRatioBar) dom.voteRatioBar.hidden = true;
+      return;
+    }
+    updateRatioBar();
+  }
+
+  function setHidden(el, hidden) { if (el) el.hidden = !!hidden; }
+
+  function updatePhaseUI() {
+    if (dom.votePhase) dom.votePhase.textContent = PHASE_LABEL[state.phase] || state.phase;
+    setHidden(dom.voteStartBtn, state.phase !== 'idle');
+    setHidden(dom.voteLockBaseline, state.phase !== 'collecting');
+    setHidden(dom.voteEndBtn, state.phase !== 'collecting' && state.phase !== 'live');
+    setHidden(dom.voteResultSection, state.phase !== 'closed' || !state.result);
+    if (state.phase === 'closed' && state.result) renderResult(state.result);
+  }
+
+  function renderResult(result) {
+    if (!dom.voteResultBox) return;
+    function cell(label, base, final, delta) {
+      return '<div class="vote-result-cell">' +
+        '<div class="vrc-label">' + label + '</div>' +
+        '<div class="vrc-value">' + final + '</div>' +
+        '<div class="vrc-delta">初始 ' + base + ' · ' + fmtDelta(delta) + '</div>' +
+      '</div>';
+    }
+    dom.voteResultBox.innerHTML =
+      cell('正方', result.baseline.pro, result.final.pro, result.delta.pro) +
+      cell('反方', result.baseline.con, result.final.con, result.delta.con) +
+      '<div class="vote-result-total">共 ' + result.total + ' 人投票</div>';
+  }
+
+  function renderHistory() {
+    var list = dom.voteHistoryList;
+    if (!list) return;
+    if (!state.history.length) {
+      list.innerHTML = '<div class="preset-empty">还没有历史记录</div>';
+      return;
+    }
+    var html = '';
+    for (var i = state.history.length - 1; i >= 0; i--) {
+      var r = state.history[i];
+      var time = '';
+      try { time = new Date(r.timestamp).toLocaleString(); } catch (e) {}
+      html += '<div class="preset-item">' +
+        '<div class="preset-info">' +
+          '<div class="preset-title">' + escapeHtml(r.room) + ' <span class="preset-tag">' + r.total + ' 票</span></div>' +
+          '<div class="preset-meta">' + escapeHtml(time) + ' · 正 ' + r.final.pro + ' / 反 ' + r.final.con + '</div>' +
+        '</div>' +
+        '<div class="preset-actions">' +
+          '<button class="preset-chip" type="button" data-hist-json="' + i + '">JSON</button>' +
+          '<button class="preset-chip" type="button" data-hist-csv="' + i + '">CSV</button>' +
+          '<button class="preset-chip preset-chip-danger" type="button" data-hist-del="' + i + '">删除</button>' +
+        '</div>' +
+      '</div>';
+    }
+    list.innerHTML = html;
+  }
+
+  function renderConfigState() {
+    var ok = hasConfig();
+    setHidden(dom.voteConfigWarning, ok);
+    setHidden(dom.voteMainSection, !ok);
+  }
+
+  function render() {
+    renderConfigState();
+    renderRoomInfo();
+    updatePhaseUI();
+    updateCountsUI();
+    if (dom.voteSwRatioBar) dom.voteSwRatioBar.classList.toggle('on', state.ratioBarOn);
+    renderHistory();
+    notifyUpdate();
+  }
+
+  /* ---------------- Export ---------------- */
+  function download(filename, content, mime) {
+    var blob = new Blob([content], { type: mime });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  function resultForExport() {
+    return state.result || VC.buildResult(state.room, state.baseline, state.tally);
+  }
+
+  /* ---------------- Supabase channel ----------------
+   * 两条频道分流，避免票数一多就把 Realtime 的消息配额用爆：
+   * - room-<code>      只用来收观众的投票广播，主持端订阅它；观众发票不订阅这条
+   *   （见 vote.html，走 REST 广播），所以一条投票只产生"发到主持端"这一次投递，
+   *   不会再广播给同房间的其他观众。
+   * - room-<code>-ctl  主持端在这条频道广播 open/closed/sync，观众只订阅这条来
+   *   接收主持端的状态；这条才是观众真正保持的 Realtime 订阅。
+   */
+  var client = null;
+  var channel = null; // room-<code>，收票
+  var ctlChannel = null; // room-<code>-ctl，发 open/closed/sync
+  var backoff = 1000;
+  var reconnectTimer = null;
+  var destroyed = false;
+
+  function ensureClient() {
+    if (client || !hasConfig()) return client;
+    var cfg = window.DEBATE_VOTE_CONFIG;
+    try {
+      client = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+    } catch (e) {
+      console.error('vote-host.js: 初始化 Supabase 客户端失败', e);
+      client = null;
+    }
+    return client;
+  }
+
+  function openOrClosedType() {
+    return (state.phase === 'idle' || state.phase === 'closed') ? 'closed' : 'open';
+  }
+
+  function broadcastMsg(payload) {
+    if (!ctlChannel) return;
+    try { ctlChannel.send({ type: 'broadcast', event: 'msg', payload: payload }); } catch (e) {}
+  }
+  function broadcastPhase() { broadcastMsg({ type: openOrClosedType() }); }
+  function broadcastSync() { broadcastMsg({ type: 'sync' }); }
+
+  function handleIncoming(payload) {
+    if (!payload || payload.type !== 'vote') return;
+    if (VC.applyVote(state.tally, payload)) {
+      persistSession();
+      updateCountsUI();
+      notifyUpdate();
+    }
+  }
+
+  function scheduleReconnect() {
+    if (reconnectTimer || destroyed) return;
+    reconnectTimer = setTimeout(function () {
+      reconnectTimer = null;
+      backoff = Math.min(backoff * 2, BACKOFF_MAX);
+      connect();
+    }, backoff);
+  }
+
+  function connect() {
+    if (destroyed || !ensureClient()) return;
+    if (channel) { try { client.removeChannel(channel); } catch (e) {} channel = null; }
+    if (ctlChannel) { try { client.removeChannel(ctlChannel); } catch (e) {} ctlChannel = null; }
+
+    var ch = client.channel('room-' + state.room);
+    ch.on('broadcast', { event: 'msg' }, function (msg) { handleIncoming(msg && msg.payload); });
+    ch.subscribe(function (status) {
+      if (destroyed) return;
+      if (status === 'SUBSCRIBED') {
+        channel = ch;
+        backoff = 1000;
+      } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        if (channel === ch) channel = null;
+        scheduleReconnect();
+      }
+    });
+
+    var ctl = client.channel('room-' + state.room + '-ctl');
+    ctl.subscribe(function (status) {
+      if (destroyed) return;
+      if (status === 'SUBSCRIBED') {
+        ctlChannel = ctl;
+        backoff = 1000;
+        // 主持端刚连上（或刷新恢复）：告诉观众当前开/关状态，并要求大家重发一次自己的票
+        broadcastPhase();
+        broadcastSync();
+      } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        if (ctlChannel === ctl) ctlChannel = null;
+        scheduleReconnect();
+      }
+    });
+  }
+
+  function reconnectToCurrentRoom() {
+    backoff = 1000;
+    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+    connect();
+  }
+
+  // 仅供 e2e 测试读取频道订阅状态，不影响正常运行
+  window.__voteHostChannelsForTest = { get vote() { return channel; }, get ctl() { return ctlChannel; } };
+
+  /* ---------------- Actions ---------------- */
+  function doStart() {
+    if (state.phase !== 'idle') return;
+    state.phase = 'collecting';
+    persistSession();
+    broadcastPhase();
+    render();
+  }
+  function doLockBaseline() {
+    if (state.phase !== 'collecting') return;
+    state.baseline = VC.snapshotBaseline(state.tally);
+    state.phase = 'live';
+    persistSession();
+    render();
+  }
+  function doEnd() {
+    if (state.phase !== 'collecting' && state.phase !== 'live') return;
+    state.result = VC.buildResult(state.room, state.baseline, state.tally);
+    state.phase = 'closed';
+    state.history.push(state.result);
+    saveJSON(HISTORY_KEY, state.history);
+    persistSession();
+    broadcastPhase();
+    render();
+  }
+  function doReset() {
+    if (!confirm('重置当前房间的投票数据？已结束的结果仍会保留在历史记录里。')) return;
+    state.tally = VC.createTally();
+    state.baseline = null;
+    state.result = null;
+    state.phase = 'idle';
+    persistSession();
+    broadcastPhase();
+    render();
+  }
+  function doNewRoom() {
+    if (!confirm('新建房间会生成新的二维码，当前房间的投票会停止接收。继续？')) return;
+    broadcastMsg({ type: 'closed' }); // best-effort：告诉旧房间已经结束
+    state.room = genRoomCode();
+    state.tally = VC.createTally();
+    state.baseline = null;
+    state.result = null;
+    state.phase = 'idle';
+    persistSession();
+    render();
+    reconnectToCurrentRoom();
+  }
+
+  function copyLink() {
+    var url = dom.voteLinkInput ? dom.voteLinkInput.value : '';
+    if (!url) return;
+    var done = function () {};
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(done, function () { fallbackCopy(url); });
+    } else {
+      fallbackCopy(url);
+    }
+  }
+  function fallbackCopy(text) {
+    if (!dom.voteLinkInput) return;
+    dom.voteLinkInput.focus();
+    dom.voteLinkInput.select();
+    try { document.execCommand('copy'); } catch (e) {}
+  }
+
+  function toggleRatioBar() {
+    state.ratioBarOn = !state.ratioBarOn;
+    persistSession();
+    render();
+  }
+
+  function openVotePanel() {
+    // 和设置抽屉互斥，避免两个面板叠在一起
+    var settingsDrawer = document.getElementById('drawer');
+    var settingsOverlay = document.getElementById('overlay');
+    if (settingsDrawer) settingsDrawer.classList.remove('open');
+    if (settingsOverlay) settingsOverlay.classList.remove('show');
+    dom.votePanel.classList.add('open');
+    dom.voteOverlay.classList.add('show');
+    render();
+  }
+  function closeVotePanel() {
+    if (!dom.votePanel) return;
+    dom.votePanel.classList.remove('open');
+    dom.voteOverlay.classList.remove('show');
+  }
+
+  function wireEvents() {
+    if (dom.btnVote) dom.btnVote.addEventListener('click', function () {
+      if (dom.votePanel.classList.contains('open')) closeVotePanel();
+      else openVotePanel();
+    });
+    if (dom.voteClose) dom.voteClose.addEventListener('click', closeVotePanel);
+    if (dom.voteOverlay) dom.voteOverlay.addEventListener('click', closeVotePanel);
+    var btnSettings = document.getElementById('btnSettings');
+    if (btnSettings) btnSettings.addEventListener('click', closeVotePanel);
+
+    if (dom.voteQrFullscreenBtn) dom.voteQrFullscreenBtn.addEventListener('click', openQrFullscreen);
+    if (dom.voteQrFullscreen) dom.voteQrFullscreen.addEventListener('click', closeQrFullscreen);
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      if (dom.voteQrFullscreen && !dom.voteQrFullscreen.hidden) { closeQrFullscreen(); return; }
+      if (dom.votePanel && dom.votePanel.classList.contains('open')) closeVotePanel();
+    });
+
+    if (dom.voteStartBtn) dom.voteStartBtn.addEventListener('click', doStart);
+    if (dom.voteLockBaseline) dom.voteLockBaseline.addEventListener('click', doLockBaseline);
+    if (dom.voteEndBtn) dom.voteEndBtn.addEventListener('click', doEnd);
+    if (dom.voteResetBtn) dom.voteResetBtn.addEventListener('click', doReset);
+    if (dom.voteNewRoom) dom.voteNewRoom.addEventListener('click', doNewRoom);
+    if (dom.voteCopyLink) dom.voteCopyLink.addEventListener('click', copyLink);
+    if (dom.voteSwRatioBar) dom.voteSwRatioBar.addEventListener('click', toggleRatioBar);
+
+    if (dom.voteExportJson) dom.voteExportJson.addEventListener('click', function () {
+      var r = resultForExport();
+      download('vote-' + r.room + '-' + r.timestamp + '.json', VC.toJSON(r), 'application/json');
+    });
+    if (dom.voteExportCsv) dom.voteExportCsv.addEventListener('click', function () {
+      var r = resultForExport();
+      download('vote-' + r.room + '-' + r.timestamp + '.csv', VC.toCSV(r), 'text/csv');
+    });
+
+    if (dom.voteHistoryList) dom.voteHistoryList.addEventListener('click', function (e) {
+      var btn = e.target.closest('button[data-hist-json], button[data-hist-csv], button[data-hist-del]');
+      if (!btn) return;
+      var idx;
+      if (btn.hasAttribute('data-hist-json')) {
+        idx = Number(btn.getAttribute('data-hist-json'));
+        var r1 = state.history[idx];
+        if (r1) download('vote-' + r1.room + '-' + r1.timestamp + '.json', VC.toJSON(r1), 'application/json');
+      } else if (btn.hasAttribute('data-hist-csv')) {
+        idx = Number(btn.getAttribute('data-hist-csv'));
+        var r2 = state.history[idx];
+        if (r2) download('vote-' + r2.room + '-' + r2.timestamp + '.csv', VC.toCSV(r2), 'text/csv');
+      } else if (btn.hasAttribute('data-hist-del')) {
+        idx = Number(btn.getAttribute('data-hist-del'));
+        state.history.splice(idx, 1);
+        saveJSON(HISTORY_KEY, state.history);
+        renderHistory();
+      }
+    });
+  }
+
+  function init() {
+    cacheDom();
+    if (!dom.btnVote || !dom.votePanel) return; // 页面结构不对就安静退出，不影响主计时器
+    wireEvents();
+    setEnabled(state.enabled);
+    render();
+    if (hasConfig()) connect();
+  }
+
+  window.VoteHost = { setEnabled: setEnabled, getSnapshot: getSnapshot };
+
+  init();
+})();
+
+</script>
 <script>
 (() => {
 'use strict';
@@ -4242,7 +5703,7 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
   const state = {
     stages: DEFAULT_STAGES.map(s => ({...s})),
     currentId: 'cover',
-    theme: 'arena',
+    theme: 'neo',
     fontScale: 1,
     sound: true,
     volume: 1, // 0–1，设置里的音量拉杆
@@ -4250,8 +5711,11 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
     autoFlow: false,
     proName: '',
     conName: '',
+    proStance: '',
+    conStance: '',
     topic: '',
     matchStage: '',
+    voteEnabled: false,
     // runtime
     running: false,
     remaining: 180,
@@ -4276,17 +5740,44 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
     cover.duration = 0;
     cover.name = cover.name || base.name;
     state.stages = state.stages.map(s => {
-      const type = s.type === 'duel' ? 'duel' : (s.type === 'cover' ? 'cover' : 'single');
+      const noTimer = s.type === 'cover' || s.type === 'vote-pre' || s.type === 'vote-final';
+      const type = s.type === 'duel' ? 'duel' : (noTimer ? s.type : 'single');
       const out = {
         ...s,
         type,
-        duration: type === 'cover' ? 0 : Math.max(10, Number(s.duration) || 60),
+        duration: noTimer ? 0 : Math.max(10, Number(s.duration) || 60),
       };
       // 只保留合法的显式设置，其余交给 duelFlowOf() 按环节名推断
       if (!isDuelFlow(out.duelFlow)) delete out.duelFlow;
       return out;
     });
     state.stages.unshift(cover);
+  }
+
+  // 无计时的特殊环节：首页、赛前票数、最终票数——不参与倒计时、开始/重置按钮
+  function isTimerless(mode) {
+    return mode === 'cover' || mode === 'vote-pre' || mode === 'vote-final';
+  }
+
+  /* ---------------- Vote stages (赛前票数 / 最终票数) ----------------
+     只在 state.voteEnabled 时存在；位置固定在首页之后、流程末尾，做法和
+     ensureCoverStage() 一样：先从数组里摘掉，再按需要重新插回固定位置，
+     调用后同样必须重新 renderStagesList()。关闭投票时整段移除，且绝不
+     写进计时器预设（见 cloneStages()）。 */
+  function ensureVoteStages() {
+    if (!Array.isArray(state.stages)) state.stages = [];
+    const takeOut = (match) => {
+      const idx = state.stages.findIndex(match);
+      return idx >= 0 ? state.stages.splice(idx, 1)[0] : null;
+    };
+    let pre = takeOut(s => s.type === 'vote-pre');
+    let fin = takeOut(s => s.type === 'vote-final');
+    if (!state.voteEnabled) return;
+    pre = Object.assign({ id: 'vote-pre', name: '赛前票数' }, pre, { id: 'vote-pre', type: 'vote-pre', duration: 0 });
+    fin = Object.assign({ id: 'vote-final', name: '最终票数' }, fin, { id: 'vote-final', type: 'vote-final', duration: 0 });
+    const coverIdx = state.stages.findIndex(s => s.type === 'cover');
+    state.stages.splice(coverIdx >= 0 ? coverIdx + 1 : 0, 0, pre);
+    state.stages.push(fin);
   }
 
   /* ---------------- LocalStorage ---------------- */
@@ -4299,7 +5790,8 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
       theme: state.theme,
       fontScale: state.fontScale, sound: state.sound, volume: state.volume, tick: state.tick,
       autoFlow: state.autoFlow, proName: state.proName, conName: state.conName,
-      topic: state.topic, matchStage: state.matchStage,
+      proStance: state.proStance, conStance: state.conStance,
+      topic: state.topic, matchStage: state.matchStage, voteEnabled: state.voteEnabled,
     };
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch (e) {}
   }
@@ -4310,11 +5802,13 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
       Object.assign(state, s);
       if (typeof state.matchStage !== 'string') state.matchStage = '2026 \u534e\u4e2d\u676f \u521d\u8d5b';
       state.volume = clampVolume(state.volume);
+      state.voteEnabled = !!state.voteEnabled;
       if (!Array.isArray(state.stages) || state.stages.length === 0) {
         state.stages = DEFAULT_STAGES.map(x => ({...x}));
         state.currentId = state.stages[0].id;
       }
       ensureCoverStage();
+      ensureVoteStages();
       if (!state.stages.find(x => x.id === state.currentId)) {
         state.currentId = state.stages[0].id;
       }
@@ -4495,6 +5989,10 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
     stage.className = 'stage stage-' + mode;
     if (mode === 'cover') {
       renderCover();
+    } else if (mode === 'vote-pre') {
+      renderVotePre();
+    } else if (mode === 'vote-final') {
+      renderVoteFinal();
     } else if (mode === 'duel') {
       renderDuel();
     } else {
@@ -4519,16 +6017,109 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
           '<label class="cover-team cover-team-pro" for="coverProSchool">' +
             '<span class="cover-team-tag">\u6b63\u65b9</span>' +
             '<input id="coverProSchool" class="cover-input cover-team-name" maxlength="32" value="' + escapeHtml(state.proName || '') + '" placeholder="\u6b63\u65b9\u5b66\u6821">' +
+            '<input id="coverProStance" class="cover-input cover-team-stance" maxlength="40" value="' + escapeHtml(state.proStance || '') + '" placeholder="\u6b63\u65b9\u7acb\u573a\uff08\u9009\u586b\uff09">' +
           '</label>' +
           '<div class="cover-vs" aria-hidden="true">VS</div>' +
           '<label class="cover-team cover-team-con" for="coverConSchool">' +
             '<span class="cover-team-tag">\u53cd\u65b9</span>' +
             '<input id="coverConSchool" class="cover-input cover-team-name" maxlength="32" value="' + escapeHtml(state.conName || '') + '" placeholder="\u53cd\u65b9\u5b66\u6821">' +
+            '<input id="coverConStance" class="cover-input cover-team-stance" maxlength="40" value="' + escapeHtml(state.conStance || '') + '" placeholder="\u53cd\u65b9\u7acb\u573a\uff08\u9009\u586b\uff09">' +
           '</label>' +
         '</div>' +
       '</section>';
     wireCoverInputs();
     fitCoverTeamNames();
+  }
+
+  function voteSnapshot() {
+    const host = window.VoteHost;
+    if (host && typeof host.getSnapshot === 'function') {
+      try {
+        const snap = host.getSnapshot();
+        if (snap && snap.counts) {
+          const count = v => Math.max(0, Number(v) || 0);
+          const baseline = snap.baseline
+            ? { pro: count(snap.baseline.pro), con: count(snap.baseline.con) }
+            : null;
+          return {
+            counts: { pro: count(snap.counts.pro), con: count(snap.counts.con) },
+            baseline,
+            phase: snap.phase || 'idle',
+          };
+        }
+      } catch (e) {}
+    }
+    return { counts: { pro: 0, con: 0 }, baseline: null, phase: 'idle' };
+  }
+
+  function voteDeltaText(n) {
+    if (n > 0) return '+' + n;
+    if (n < 0) return '\u2212' + Math.abs(n);
+    return '+0';
+  }
+
+  function renderVoteChart(counts, deltas) {
+    const max = Math.max(counts.pro, counts.con, 1);
+    const height = n => n <= 0 ? 0 : Math.max(6, n / max * 100);
+    const col = (side, count, stance, delta) =>
+      '<div class="vote-chart-col vote-chart-' + side + '">' +
+        '<div class="vote-chart-count">' + count + '</div>' +
+        '<div class="vote-chart-track">' +
+          '<div class="vote-chart-fill" style="height:' + height(count).toFixed(2) + '%"></div>' +
+        '</div>' +
+        '<div class="vote-chart-stance">' + escapeHtml(stance) + '</div>' +
+        (delta == null ? '' : '<div class="vote-chart-delta">' + voteDeltaText(delta) + '</div>') +
+      '</div>';
+    return '<div class="vote-chart" role="img" aria-label="\u6b63\u65b9 ' + counts.pro + ' \u7968\uff0c\u53cd\u65b9 ' + counts.con + ' \u7968">' +
+      col('pro', counts.pro, state.proStance || '\u6b63\u65b9', deltas ? deltas.pro : null) +
+      col('con', counts.con, state.conStance || '\u53cd\u65b9', deltas ? deltas.con : null) +
+    '</div>';
+  }
+
+  function renderVotePre() {
+    const snap = voteSnapshot();
+    const locked = !!snap.baseline;
+    const counts = locked ? snap.baseline : snap.counts;
+    const total = counts.pro + counts.con;
+    stage.innerHTML =
+      '<section class="vote-page vote-page-pre" aria-label="\u8d5b\u524d\u7968\u6570">' +
+        '<div class="vote-page-head">' +
+          '<div class="vote-page-eyebrow">\u89c2\u4f17\u6295\u7968</div>' +
+          '<h2 class="vote-page-title">\u8d5b\u524d\u7968\u6570</h2>' +
+          '<div class="vote-page-sub">' +
+            '<span class="vote-page-status">' + (locked ? '\u521d\u59cb\u7acb\u573a' : '\u5b9e\u65f6') + '</span>' +
+            '<span class="vote-page-total">\u5171 ' + total + ' \u4eba</span>' +
+          '</div>' +
+        '</div>' +
+        renderVoteChart(counts, null) +
+        '<p class="vote-page-hint">' + (locked ? '\u521d\u59cb\u7acb\u573a\u5df2\u9501\u5b9a' : '\u5728\u6295\u7968\u9762\u677f\u9501\u5b9a\u521d\u59cb\u7acb\u573a') + '</p>' +
+      '</section>';
+  }
+
+  function renderVoteFinal() {
+    const snap = voteSnapshot();
+    const counts = snap.counts;
+    const total = counts.pro + counts.con;
+    const deltas = snap.baseline
+      ? { pro: counts.pro - snap.baseline.pro, con: counts.con - snap.baseline.con }
+      : null;
+    stage.innerHTML =
+      '<section class="vote-page vote-page-final" aria-label="\u6700\u7ec8\u7968\u6570">' +
+        '<div class="vote-page-head">' +
+          '<div class="vote-page-eyebrow">\u89c2\u4f17\u6295\u7968</div>' +
+          '<h2 class="vote-page-title">\u6700\u7ec8\u7968\u6570</h2>' +
+          '<div class="vote-page-sub">' +
+            '<span class="vote-page-total">\u5171 ' + total + ' \u4eba\u6295\u7968</span>' +
+          '</div>' +
+        '</div>' +
+        renderVoteChart(counts, deltas) +
+        (deltas ? '' : '<p class="vote-page-hint">\u672c\u6b21\u6295\u7968\u6ca1\u6709\u9501\u5b9a\u521d\u59cb\u7acb\u573a</p>') +
+      '</section>';
+  }
+
+  function onVoteUpdate() {
+    const mode = curMode();
+    if (mode === 'vote-pre' || mode === 'vote-final') renderStage();
   }
 
   /* 首页队名：字多了就缩字号，正反方始终用同一个字号。
@@ -4580,6 +6171,8 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
     setFieldValue('coverTopic', state.topic || '');
     setFieldValue('coverProSchool', state.proName || '');
     setFieldValue('coverConSchool', state.conName || '');
+    setFieldValue('coverProStance', state.proStance || '');
+    setFieldValue('coverConStance', state.conStance || '');
     fitCoverTeamNames();
   }
 
@@ -4602,6 +6195,8 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
     // updateTimes() 在首页会走 syncCoverFields()，顺带重新适配队名字号
     bind('coverProSchool', 'proName', 32, () => { updateTimes(); applyInputs(); });
     bind('coverConSchool', 'conName', 32, () => { updateTimes(); applyInputs(); });
+    bind('coverProStance', 'proStance', 40);
+    bind('coverConStance', 'conStance', 40);
   }
 
   
@@ -4811,6 +6406,7 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
       syncHeaderTopic();
       return;
     }
+    if (isTimerless(curMode())) return; // vote-pre / vote-final：票数由事件驱动的渲染负责，这里没有计时要同步
     if (curMode() === 'duel') {
       const proEl = document.getElementById('proTime');
       const conEl = document.getElementById('conTime');
@@ -4941,7 +6537,7 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
   }
 
   function toggleRun() {
-    if (curMode() === 'cover') return;
+    if (isTimerless(curMode())) return;
     ensureAudio();
     // 时间到后不再继续计时：已归零的计时器不能再开始，只能重置
     if (!state.running && activeRemaining() <= 0) { updateStartButton(); return; }
@@ -4962,7 +6558,7 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
   function resetTimer() {
     state.running = false;
     updateStartButton();
-    if (curMode() === 'cover') {
+    if (isTimerless(curMode())) {
       updateTimes();
       return;
     }
@@ -4989,7 +6585,7 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
     state.running = false;
     // Restore from cache (preserves remaining)
     const rt = getRuntime(id);
-    if (curMode() === 'cover') {
+    if (isTimerless(curMode())) {
       state.remaining = 0;
     } else if (curMode() === 'duel') {
       state.duel.pro = rt.duelPro;
@@ -5009,7 +6605,7 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
     const id = state.currentId;
     const rt = getRuntime(id);
     if (!rt) return;
-    if (curMode() === 'cover') {
+    if (isTimerless(curMode())) {
       return;
     }
     if (curMode() === 'duel') {
@@ -5106,7 +6702,7 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
         span.textContent = text;
         b.appendChild(span);
       };
-      if (s.type === 'cover') {
+      if (isTimerless(s.type)) {
         add('stage-panel-no', '');
         add('stage-panel-name', s.name);
       } else {
@@ -5152,7 +6748,7 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
     const label = document.getElementById('startLabel');
     const icon = document.getElementById('iconPlay');
     const btn = document.getElementById('btnStart');
-    if (curMode() === 'cover') {
+    if (isTimerless(curMode())) {
       if (btn) { btn.disabled = true; btn.classList.add('disabled'); }
       label.textContent = '\u65e0\u8ba1\u65f6';
       icon.innerHTML = '<path d="M5 12h14"/>';
@@ -5217,23 +6813,28 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
     list.innerHTML = '';
     state.stages.forEach((stg, idx) => {
       const isCover = stg.type === 'cover';
+      const isVote = stg.type === 'vote-pre' || stg.type === 'vote-final';
+      const locked = isCover || isVote; // 不能切类型/改时长/删除
       const row = document.createElement('div');
       row.className = 'stage-row';
-      row.draggable = true;
+      row.draggable = !isVote; // 投票环节位置固定，不能拖拽重排
       row.dataset.idx = idx;
+      const typeLabel = isCover ? '\u9996\u9875' : isVote ? '\u6295\u7968' : (stg.type === 'duel' ? '\u53cc' : '\u5355');
+      const typeTitle = isCover ? '\u9996\u9875\u4e0d\u53c2\u4e0e\u8ba1\u65f6' : isVote ? '\u6295\u7968\u73af\u8282\u4e0d\u53c2\u4e0e\u8ba1\u65f6\uff0c\u4f4d\u7f6e\u56fa\u5b9a' : '\u5207\u6362\u7c7b\u578b';
       row.innerHTML = `
         <span class="stage-grip">⋮⋮</span>
-        <input class="stage-name-input" value="${escapeHtml(stg.name)}" maxlength="10">
-        <button class="stage-type-pill" data-type="${stg.type}" title="${isCover ? '\u9996\u9875\u4e0d\u53c2\u4e0e\u8ba1\u65f6' : '\u5207\u6362\u7c7b\u578b'}" ${isCover ? 'disabled' : ''}>${isCover ? '\u9996\u9875' : (stg.type === 'duel' ? '\u53cc' : '\u5355')}</button>
+        <input class="stage-name-input" value="${escapeHtml(stg.name)}" maxlength="10" ${isVote ? 'disabled' : ''}>
+        <button class="stage-type-pill" data-type="${stg.type}" title="${typeTitle}" ${locked ? 'disabled' : ''}>${typeLabel}</button>
         <button class="stage-flow-pill"></button>
-        <input type="number" class="stage-dur-input" value="${stg.duration}" min="0" step="10" ${isCover ? 'disabled' : ''}>
+        <input type="number" class="stage-dur-input" value="${stg.duration}" min="0" step="10" ${locked ? 'disabled' : ''}>
         <span style="font-size:10px;color:var(--ink-3);font-family:'JetBrains Mono',monospace;">s</span>
-        <button class="stage-del" title="\u5220\u9664" ${isCover ? 'disabled' : ''}>\u00d7</button>
+        <button class="stage-del" title="\u5220\u9664" ${locked ? 'disabled' : ''}>\u00d7</button>
       `;
       const flowPill = row.querySelector('.stage-flow-pill');
       syncFlowPill(flowPill, stg);
       // name
       row.querySelector('.stage-name-input').addEventListener('input', (e) => {
+        if (isVote) return;
         stg.name = e.target.value.slice(0, 10) || '环节';
         // 没手动设过交锋/独立的环节，默认值跟着名字走
         syncFlowPill(flowPill, stg);
@@ -5245,7 +6846,7 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
       flowPill.addEventListener('click', () => toggleDuelFlow(stg, flowPill));
       // type toggle
       row.querySelector('.stage-type-pill').addEventListener('click', (e) => {
-        if (stg.type === 'cover') return;
+        if (locked) return;
         stg.type = stg.type === 'duel' ? 'single' : 'duel';
         delete runtimeCache[stg.id];
         renderStagesList(); renderModeTabs(); updateFlowDots();
@@ -5254,7 +6855,7 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
       });
       // duration
       row.querySelector('.stage-dur-input').addEventListener('change', (e) => {
-        if (stg.type === 'cover') return;
+        if (locked) return;
         const v = Math.max(10, parseInt(e.target.value) || 10);
         stg.duration = v; e.target.value = v;
         // invalidate cache so the new duration takes effect
@@ -5264,7 +6865,7 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
       });
       // delete
       row.querySelector('.stage-del').addEventListener('click', () => {
-        if (stg.type === 'cover') return;
+        if (locked) return;
         if (state.stages.length <= 1) return;
         const wasCurrent = stg.id === state.currentId;
         state.stages = state.stages.filter(s => s.id !== stg.id);
@@ -5291,6 +6892,7 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
         const item = state.stages.splice(from, 1)[0];
         state.stages.splice(to, 0, item);
         ensureCoverStage();
+        ensureVoteStages();
         renderStagesList(); renderModeTabs(); updateFlowDots();
         saveState();
       });
@@ -5302,6 +6904,7 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
     const id = 's' + Date.now() + Math.floor(Math.random()*1000);
     state.stages.push({ id, name, type, duration: dur });
     ensureCoverStage();
+    ensureVoteStages();
     renderStagesList(); renderModeTabs(); updateFlowDots();
     saveState();
   }
@@ -5311,8 +6914,10 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
     Object.keys(runtimeCache).forEach(k => delete runtimeCache[k]);
   }
 
+  // 预设 / 计时器存储从不带 vote-pre / vote-final：它们是「开启观众投票」这个开关
+  // 派生出来的，不是赛制的一部分，套用预设后 ensureVoteStages() 会按当前开关重新插回。
   function cloneStages(stages) {
-    return stages.map(s => {
+    return stages.filter(s => s.type !== 'vote-pre' && s.type !== 'vote-final').map(s => {
       const out = { id: s.id, name: s.name, type: s.type, duration: s.duration };
       if (isDuelFlow(s.duelFlow)) out.duelFlow = s.duelFlow;
       return out;
@@ -5442,6 +7047,7 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
       return out;
     });
     ensureCoverStage();
+    ensureVoteStages();
     state.currentId = state.stages[0].id;
     clearRuntimeCache();
     resetTimer();
@@ -5466,6 +7072,7 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
     state.running = false;
     state.stages = cloneStages(preset.stages);
     ensureCoverStage();
+    ensureVoteStages();
     state.currentId = state.stages.find(s => s.id === preset.currentId) ? preset.currentId : state.stages[0].id;
     clearRuntimeCache();
     resetTimer();
@@ -5515,7 +7122,7 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
   const SHARE_MAX_STAGES = 40;
 
   function encodeFormat(stages) {
-    const rows = stages.filter(s => s.type !== 'cover').map(s => {
+    const rows = stages.filter(s => s.type !== 'cover' && s.type !== 'vote-pre' && s.type !== 'vote-final').map(s => {
       const row = [s.name, s.type === 'duel' ? 1 : 0, s.duration];
       // 交锋 / 独立写成实际生效的值，对方不依赖按环节名推断也能得到同样的行为
       if (s.type === 'duel') row.push(duelFlowOf(s) === 'solo' ? 1 : 0);
@@ -5578,7 +7185,7 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
   }
 
   function shareFormat() {
-    const stages = state.stages.filter(s => s.type !== 'cover');
+    const stages = state.stages.filter(s => s.type !== 'cover' && s.type !== 'vote-pre' && s.type !== 'vote-final');
     if (!stages.length) { setShareStatus('还没有环节'); return; }
     const totalSeconds = stages.reduce((sum, stg) => sum + (Number(stg.duration) || 0) * (stg.type === 'duel' ? 2 : 1), 0);
     const text = '【辩论计时器赛制】' + stages.length + ' 环节 · ' + formatTime(totalSeconds) + '｜' + encodeFormat(stages);
@@ -5611,8 +7218,29 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
   function openDrawer() { setStagePanel(false); drawer.classList.add('open'); overlay.classList.add('show'); }
   function closeDrawer() { drawer.classList.remove('open'); overlay.classList.remove('show'); }
 
+  /* ---------------- 开启观众投票 ----------------
+     只是把 vote-pre / vote-final 两个特殊环节和 vote-host.js 那一整套 UI
+     （图标按钮、票数条、投票面板）挂上/摘下，计票逻辑本身一直在 vote-host.js
+     里跑，这里只负责开关。initial=true 时只同步 VoteHost，不重复触发渲染
+     （init() 后面自己会 renderStagesList() / renderStage() 一次）。 */
+  function applyVoteEnabled(initial) {
+    if (window.VoteHost && typeof window.VoteHost.setEnabled === 'function') {
+      window.VoteHost.setEnabled(state.voteEnabled);
+    }
+    const swVote = document.getElementById('swVoteEnabled');
+    if (swVote) swVote.classList.toggle('on', state.voteEnabled);
+    if (initial) return;
+    if (!state.stages.find(s => s.id === state.currentId)) state.currentId = state.stages[0].id;
+    renderStagesList();
+    renderModeTabs();
+    updateFlowDots();
+    renderStage();
+    updateStartButton();
+    saveState();
+  }
+
   /* ---------------- Theme + font ---------------- */
-  const THEMES = ['arena', 'academy', 'soft', 'broadcast', 'terminal'];
+  const THEMES = ['neo', 'arena', 'academy', 'soft', 'broadcast', 'terminal'];
   function applyTheme() {
     // 旧版的 warm / dark / paper 已下线，存档里的旧值统一落到默认主题
     if (THEMES.indexOf(state.theme) < 0) state.theme = THEMES[0];
@@ -5639,6 +7267,7 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
     document.getElementById('volumeRange').value = pct;
     document.getElementById('volumeValue').textContent = pct + '%';
     document.getElementById('swAutoFlow').classList.toggle('on', state.autoFlow);
+    document.getElementById('swVoteEnabled').classList.toggle('on', state.voteEnabled);
     const iconSound = document.getElementById('iconSound');
     const btnSound = document.getElementById('btnSound');
     btnSound.classList.toggle('active', state.sound);
@@ -5759,6 +7388,11 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
     document.getElementById('swAutoFlow').addEventListener('click', () => {
       state.autoFlow = !state.autoFlow; applyInputs(); saveState();
     });
+    document.getElementById('swVoteEnabled').addEventListener('click', () => {
+      state.voteEnabled = !state.voteEnabled;
+      ensureVoteStages();
+      applyVoteEnabled();
+    });
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && isStagePanelOpen()) { setStagePanel(false); return; }
@@ -5791,6 +7425,7 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
 
     // 窗口大小、全屏、网页字体加载完成都会改变队名可用宽度或字宽
     if (typeof window.addEventListener === 'function') {
+      window.addEventListener('vote:update', onVoteUpdate);
       window.addEventListener('resize', fitCoverTeamNames);
       window.addEventListener('resize', () => scrollTabsToActive(true));
     }
@@ -5804,14 +7439,16 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
   // 之前，否则抽屉里每一行闭包住的都是已经被丢弃的环节对象，
   // 页面刚打开时的第一次改名/改时长/换类型会全部丢失。
   ensureCoverStage();
+  ensureVoteStages();
   if (!state.stages.find(s => s.id === state.currentId)) state.currentId = state.stages[0].id;
+  applyVoteEnabled(true);
   applyTheme();
   applyInputs();
   loadBackground();
   renderStagesList();
   renderPresetList();
   renderModeTabs();
-  if (curMode() === 'cover') {
+  if (isTimerless(curMode())) {
     state.remaining = 0;
   } else if (curMode() === 'duel') {
     state.duel.pro = curDuration();
