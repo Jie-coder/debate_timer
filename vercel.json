@@ -1,0 +1,4 @@
+{
+  "cleanUrls": true,
+  "buildCommand": "node scripts/gen-config.js"
+}

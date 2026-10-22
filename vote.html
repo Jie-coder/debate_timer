@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>现场投票</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    background: #12141c;
+    color: #f4f5f8;
+    font-family: "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    padding: max(20px, env(safe-area-inset-top)) 18px max(20px, env(safe-area-inset-bottom));
+  }
+  .wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    max-width: 480px;
+    width: 100%;
+    margin: 0 auto;
+  }
+  .room-tag {
+    text-align: center;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    color: #9aa0b4;
+    font-family: "JetBrains Mono", monospace;
+  }
+  .status {
+    text-align: center;
+    font-size: 12px;
+    color: #7d8296;
+  }
+  .status-ok { color: #4fd17a; }
+  .status-pending { color: #e8b84b; }
+  .status-bad { color: #ef5b5b; }
+  .current {
+    text-align: center;
+    font-size: 15px;
+    color: #cfd2e0;
+    min-height: 1.4em;
+  }
+  .buttons {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 8px;
+  }
+  .side-btn {
+    flex: 1;
+    min-height: 120px;
+    border-radius: 20px;
+    border: 2px solid transparent;
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    color: #fff;
+    transition: transform 0.12s ease, border-color 0.12s ease, opacity 0.12s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .side-btn:active { transform: scale(0.97); }
+  .side-btn:disabled { opacity: 0.4; cursor: default; transform: none; }
+  .side-pro { background: linear-gradient(160deg, #2f5fd8, #1d3f99); }
+  .side-con { background: linear-gradient(160deg, #d8432f, #991d1d); }
+  .side-btn.active { border-color: #fff; box-shadow: 0 0 0 4px rgba(255,255,255,0.15); }
+  .closed-banner {
+    text-align: center;
+    font-size: 16px;
+    font-weight: 600;
+    color: #e8b84b;
+    padding: 10px;
+    border-radius: 12px;
+    background: rgba(232, 184, 75, 0.12);
+  }
+  .error {
+    text-align: center;
+    font-size: 15px;
+    color: #f4f5f8;
+    line-height: 1.6;
+    margin: auto 0;
+    padding: 0 10px;
+  }
+  .footer-hint {
+    text-align: center;
+    font-size: 11px;
+    color: #585c6e;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="room-tag" id="roomTag"></div>
+    <div class="status" id="statusLine">连接中…</div>
+    <div class="current" id="currentLine"></div>
+    <div class="buttons" id="buttonsWrap">
+      <button class="side-btn side-pro" id="btnPro" type="button">正方</button>
+      <button class="side-btn side-con" id="btnCon" type="button">反方</button>
+    </div>
+    <div class="closed-banner" id="closedBanner" hidden>投票已结束</div>
+    <div class="error" id="errorBox" hidden></div>
+    <div class="footer-hint" id="footerHint">可随时改票，以最后一次为准</div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    var statusEl = document.getElementById('statusLine');
+    var currentEl = document.getElementById('currentLine');
+    var roomTagEl = document.getElementById('roomTag');
+    var btnPro = document.getElementById('btnPro');
+    var btnCon = document.getElementById('btnCon');
+    var closedBanner = document.getElementById('closedBanner');
+    var errorBox = document.getElementById('errorBox');
+    var buttonsWrap = document.getElementById('buttonsWrap');
+    var footerHint = document.getElementById('footerHint');
+
+    function showFatal(msg) {
+      errorBox.textContent = msg;
+      errorBox.hidden = false;
+      statusEl.hidden = true;
+      currentEl.hidden = true;
+      buttonsWrap.hidden = true;
+      footerHint.hidden = true;
+    }
+
+    var params = new URLSearchParams(location.search);
+    var room = (params.get('room') || '').trim().toUpperCase();
+    if (!room) {
+      showFatal('缺少房间码，请使用主持人提供的二维码或投票链接重新进入。');
+      return;
+    }
+    roomTagEl.textContent = '房间 ' + room;
+
+    var cfg = window.DEBATE_VOTE_CONFIG || {};
+    if (!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY) {
+      showFatal('投票功能还没有配置，请联系主持人。');
+      return;
+    }
+    if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+      showFatal('投票服务加载失败，请检查网络后刷新页面重试。');
+      return;
+    }
+
+    function uuid() {
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        var r = (Math.random() * 16) | 0;
+        var v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      });
+    }
+
+    var VOTER_KEY = 'debate-timer-v2-vote-voter-id';
+    var voterId = null;
+    try { voterId = localStorage.getItem(VOTER_KEY); } catch (e) {}
+    if (!voterId) {
+      voterId = uuid();
+      try { localStorage.setItem(VOTER_KEY, voterId); } catch (e) {}
+    }
+
+    var SIDES_KEY = 'debate-timer-v2-vote-sides';
+    function loadSides() {
+      try { return JSON.parse(localStorage.getItem(SIDES_KEY) || '{}') || {}; } catch (e) { return {}; }
+    }
+    function saveSide(side) {
+      var sides = loadSides();
+      sides[room] = side;
+      try { localStorage.setItem(SIDES_KEY, JSON.stringify(sides)); } catch (e) {}
+    }
+
+    var mySide = loadSides()[room] || null;
+    var votingClosed = false;
+
+    function renderCurrent() {
+      if (mySide === 'pro') currentEl.textContent = '你当前投给：正方';
+      else if (mySide === 'con') currentEl.textContent = '你当前投给：反方';
+      else currentEl.textContent = '还没有投票，点一下下面的按钮';
+      btnPro.classList.toggle('active', mySide === 'pro');
+      btnCon.classList.toggle('active', mySide === 'con');
+    }
+    renderCurrent();
+
+    function setStatus(text, kind) {
+      statusEl.textContent = text;
+      statusEl.className = 'status' + (kind ? ' status-' + kind : '');
+    }
+
+    function applyClosed(closed) {
+      votingClosed = closed;
+      closedBanner.hidden = !closed;
+      btnPro.disabled = closed;
+      btnCon.disabled = closed;
+    }
+
+    var client = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+    var channelName = 'room-' + room;
+    var channel = null;
+    var backoff = 1000;
+    var BACKOFF_MAX = 15000;
+    var reconnectTimer = null;
+    var destroyed = false;
+
+    function sendVote() {
+      if (!mySide || !channel) return;
+      channel.send({
+        type: 'broadcast',
+        event: 'msg',
+        payload: { type: 'vote', voter_id: voterId, side: mySide, ts: Date.now() },
+      });
+    }
+
+    function handlePayload(payload) {
+      if (!payload || typeof payload !== 'object') return;
+      if (payload.type === 'sync') sendVote();
+      else if (payload.type === 'closed') applyClosed(true);
+      else if (payload.type === 'open') applyClosed(false);
+    }
+
+    function scheduleReconnect() {
+      if (reconnectTimer || destroyed) return;
+      reconnectTimer = setTimeout(function () {
+        reconnectTimer = null;
+        backoff = Math.min(backoff * 2, BACKOFF_MAX);
+        connect();
+      }, backoff);
+    }
+
+    function connect() {
+      if (destroyed) return;
+      if (channel) {
+        try { client.removeChannel(channel); } catch (e) {}
+        channel = null;
+      }
+      setStatus('连接中…', 'pending');
+      var ch = client.channel(channelName);
+      ch.on('broadcast', { event: 'msg' }, function (msg) { handlePayload(msg && msg.payload); });
+      ch.subscribe(function (status) {
+        if (destroyed) return;
+        if (status === 'SUBSCRIBED') {
+          channel = ch;
+          backoff = 1000;
+          setStatus('已连接', 'ok');
+          sendVote();
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          if (channel === ch) channel = null;
+          setStatus('连接中断，重试中…', 'bad');
+          scheduleReconnect();
+        }
+      });
+    }
+
+    function chooseSide(side) {
+      if (votingClosed) return;
+      mySide = side;
+      saveSide(side);
+      renderCurrent();
+      sendVote();
+    }
+
+    btnPro.addEventListener('click', function () { chooseSide('pro'); });
+    btnCon.addEventListener('click', function () { chooseSide('con'); });
+
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible' && !destroyed && !channel) {
+        if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+        backoff = 1000;
+        connect();
+      }
+    });
+    window.addEventListener('beforeunload', function () { destroyed = true; });
+
+    connect();
+  })();
+  </script>
+</body>
+</html>

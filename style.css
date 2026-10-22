@@ -3866,3 +3866,113 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
     html body[data-theme] .cover-topic-input { field-sizing: content; height: auto; max-height: 2.3em; }
   }
 }
+
+/* ========== 现场投票 ========== */
+/* 票数条固定在视口边缘，落在 body 外边距里（body 的 padding 比票数条还高），
+   所以不管哪个主题、哪个断点，都不会盖住 .app 里的单 / 双计时内容。 */
+.vote-ratio-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 1px;
+  transform: translateX(-50%);
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 16px);
+  padding: 1px 12px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--ink-2);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  opacity: 0.92;
+}
+.vote-ratio-bar[hidden] { display: none; }
+body[data-screen="cover"] .vote-ratio-bar { display: none !important; }
+.vrb-side { color: var(--ink); }
+.vrb-delta { color: var(--ink-3); margin-left: 2px; }
+.vrb-sep { color: var(--ink-3); }
+
+.vote-drawer .vote-room-code {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+}
+.vote-drawer .vote-qr-outer {
+  display: flex;
+  justify-content: center;
+  margin: 10px 0;
+}
+.vote-drawer .vote-qr-wrap {
+  background: #fff;
+  padding: 10px;
+  border-radius: 12px;
+  display: inline-flex;
+  min-height: 132px;
+  min-width: 132px;
+  align-items: center;
+  justify-content: center;
+}
+.vote-drawer .vote-qr-wrap svg,
+.vote-drawer .vote-qr-wrap img,
+.vote-drawer .vote-qr-wrap table { width: 120px; height: 120px; }
+.vote-drawer #voteLinkInput { flex: 1 1 auto; width: auto; }
+.vote-drawer .vote-phase,
+.vote-drawer .vote-counts {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  color: var(--ink);
+}
+.vote-drawer .preset-hint code {
+  font-family: "JetBrains Mono", monospace;
+  background: var(--bg-2);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+.vote-result-box {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 4px;
+}
+.vote-result-cell {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-2);
+  padding: 10px 12px;
+}
+.vote-result-cell .vrc-label {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-family: "JetBrains Mono", monospace;
+}
+.vote-result-cell .vrc-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--ink);
+  font-family: "JetBrains Mono", monospace;
+  margin-top: 2px;
+}
+.vote-result-cell .vrc-delta {
+  font-size: 12px;
+  color: var(--ink-3);
+  margin-top: 2px;
+  font-family: "JetBrains Mono", monospace;
+}
+.vote-result-total {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ink-3);
+}

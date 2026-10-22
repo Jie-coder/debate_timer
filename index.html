@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>辩论计时器</title>
   <link rel="stylesheet" href="style.css">
+  <script src="vote-core.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js" defer></script>
+  <script src="config.js" defer></script>
+  <script src="vote-host.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 <body data-theme="arena">
@@ -40,6 +45,12 @@
         <button class="icon-btn" id="btnFullscreen" title="全屏 (F)">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
             <path d="M3 7V3h4M17 3h4v4M21 17v4h-4M7 21H3v-4"></path>
+          </svg>
+        </button>
+        <button class="icon-btn" id="btnVote" title="现场投票">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M9 11l3 3L22 4"></path>
+            <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
           </svg>
         </button>
         <button class="icon-btn" id="btnSettings" title="设置">
@@ -252,5 +263,89 @@
   </aside>
 
   <div class="flash" id="flash"></div>
+
+  <!-- 票数条：在单 / 双计时页顶一条不打扰布局的小条，首页和未开票时不显示 -->
+  <div class="vote-ratio-bar" id="voteRatioBar" hidden aria-live="polite">
+    <span class="vrb-side vrb-pro" id="vrbPro"></span>
+    <span class="vrb-sep">/</span>
+    <span class="vrb-side vrb-con" id="vrbCon"></span>
+  </div>
+
+  <!-- Vote panel -->
+  <div class="overlay" id="voteOverlay"></div>
+  <aside class="drawer vote-drawer" id="votePanel">
+    <h3>
+      <span>现场投票</span>
+      <button class="icon-btn" id="voteClose">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12"></path>
+        </svg>
+      </button>
+    </h3>
+
+    <div class="drawer-section" id="voteConfigWarning" hidden>
+      <div class="drawer-section-label">提示</div>
+      <p class="preset-hint">投票功能还没有配置。复制 <code>config.example.js</code> 为 <code>config.js</code> 并填入 Supabase 信息，详见 VOTING.md。</p>
+    </div>
+
+    <div class="drawer-section" id="voteMainSection">
+      <div class="drawer-section-label">房间</div>
+      <div class="field-row">
+        <span class="field-label">房间码</span>
+        <span class="vote-room-code" id="voteRoomCode">——</span>
+      </div>
+      <div class="vote-qr-outer">
+        <div class="vote-qr-wrap" id="voteQrWrap"></div>
+      </div>
+      <div class="field-row">
+        <span class="field-label">链接</span>
+        <input type="text" class="input input-text" id="voteLinkInput" readonly>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+        <button class="chip" id="voteCopyLink" type="button">复制链接</button>
+        <button class="chip" id="voteNewRoom" type="button">新建房间</button>
+      </div>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-label">状态</div>
+      <div class="field-row">
+        <span class="field-label">阶段</span>
+        <span class="vote-phase" id="votePhase">未开始</span>
+      </div>
+      <div class="field-row">
+        <span class="field-label">票数</span>
+        <span class="vote-counts" id="voteCounts">正方 0 · 反方 0</span>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+        <button class="preset-new-btn" id="voteStartBtn" type="button">开始投票</button>
+        <button class="preset-new-btn" id="voteLockBaseline" type="button">锁定初始立场</button>
+        <button class="preset-new-btn" id="voteEndBtn" type="button">结束投票</button>
+        <button class="chip" id="voteResetBtn" type="button">重置</button>
+      </div>
+    </div>
+
+    <div class="drawer-section" id="voteResultSection" hidden>
+      <div class="drawer-section-label">结果</div>
+      <div id="voteResultBox" class="vote-result-box"></div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+        <button class="chip" id="voteExportJson" type="button">导出 JSON</button>
+        <button class="chip" id="voteExportCsv" type="button">导出 CSV</button>
+      </div>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-label">显示</div>
+      <div class="field-row">
+        <span class="field-label">在计时页顶显示票数条</span>
+        <div class="switch" id="voteSwRatioBar"></div>
+      </div>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-label">历史记录</div>
+      <div id="voteHistoryList" class="preset-list"></div>
+    </div>
+  </aside>
 </body>
 </html>
