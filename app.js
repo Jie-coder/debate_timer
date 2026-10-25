@@ -444,6 +444,26 @@
       '</section>';
     wireCoverInputs();
     fitCoverTeamNames();
+    fitCoverTopic();
+  }
+
+  // 辩题字数分档：短辩题沿用默认大字号（不设 data-len），长辩题逐档缩字号、多留一行，
+  // 对应 style.css 里 .cover-topic-input[data-len] 和 --cover-topic-lines 两套规则
+  const COVER_TOPIC_BUCKETS = [
+    { max: 14, len: null, lines: 2 },
+    { max: 26, len: 'm', lines: 2 },
+    { max: 44, len: 'l', lines: 3 },
+    { max: Infinity, len: 'xl', lines: 3 },
+  ];
+  function fitCoverTopic() {
+    const el = document.getElementById('coverTopic');
+    if (!el) return;
+    const len = (el.value || '').length;
+    const bucket = COVER_TOPIC_BUCKETS.find(b => len <= b.max) || COVER_TOPIC_BUCKETS[COVER_TOPIC_BUCKETS.length - 1];
+    if (bucket.len) el.dataset.len = bucket.len;
+    else delete el.dataset.len;
+    el.rows = bucket.lines;
+    el.style.setProperty('--cover-topic-lines', bucket.lines);
   }
 
   function voteSnapshot() {
@@ -473,22 +493,102 @@
     return '+0';
   }
 
-  function renderVoteChart(counts, deltas) {
-    const max = Math.max(counts.pro, counts.con, 1);
-    const height = n => n <= 0 ? 0 : Math.max(6, n / max * 100);
-    const col = (side, count, stance, delta) =>
-      '<div class="vote-chart-col vote-chart-' + side + '">' +
-        '<div class="vote-chart-count">' + count + '</div>' +
-        '<div class="vote-chart-track">' +
-          '<div class="vote-chart-fill" style="height:' + height(count).toFixed(2) + '%"></div>' +
-        '</div>' +
-        '<div class="vote-chart-stance">' + escapeHtml(stance) + '</div>' +
-        (delta == null ? '' : '<div class="vote-chart-delta">' + voteDeltaText(delta) + '</div>') +
-      '</div>';
-    return '<div class="vote-chart" role="img" aria-label="\u6b63\u65b9 ' + counts.pro + ' \u7968\uff0c\u53cd\u65b9 ' + counts.con + ' \u7968">' +
-      col('pro', counts.pro, state.proStance || '\u6b63\u65b9', deltas ? deltas.pro : null) +
-      col('con', counts.con, state.conStance || '\u53cd\u65b9', deltas ? deltas.con : null) +
+  function voteChartHeightPct(n, max) {
+    return n <= 0 ? 0 : Math.max(6, n / max * 100);
+  }
+
+  function prefersReducedMotion() {
+    return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  // \u8ba1\u6570\u6570\u5b57\u4ece\u65e7\u503c\u6570\u5230\u65b0\u503c\uff1a\u6587\u672c\u8282\u70b9\u6ca1\u6709 CSS transition \u53ef\u7528\uff0c\u8fd9\u91cc\u7528 rAF \u81ea\u5df1\u8ddf\u8fdb\u5ea6
+  function tweenVoteCount(el, from, to) {
+    if (el._voteCountRaf) { cancelAnimationFrame(el._voteCountRaf); el._voteCountRaf = null; }
+    if (from === to) { el.textContent = String(to); return; }
+    const duration = 500;
+    const start = performance.now();
+    const step = now => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      el.textContent = String(Math.round(from + (to - from) * eased));
+      if (t < 1) {
+        el._voteCountRaf = requestAnimationFrame(step);
+      } else {
+        el.textContent = String(to);
+        el._voteCountRaf = null;
+      }
+    };
+    el._voteCountRaf = requestAnimationFrame(step);
+  }
+
+  function voteChartColHTML(side, stance, delta) {
+    return '<div class="vote-chart-col vote-chart-' + side + '">' +
+      '<div class="vote-chart-count" data-value="0">0</div>' +
+      '<div class="vote-chart-track">' +
+        '<div class="vote-chart-fill" style="height:0%"></div>' +
+      '</div>' +
+      '<div class="vote-chart-stance">' + escapeHtml(stance) + '</div>' +
+      (delta == null ? '' : '<div class="vote-chart-delta">' + voteDeltaText(delta) + '</div>') +
     '</div>';
+  }
+
+  function buildVoteChartHTML(counts, deltas) {
+    return '<div class="vote-chart" role="img" aria-label="\u6b63\u65b9 ' + counts.pro + ' \u7968\uff0c\u53cd\u65b9 ' + counts.con + ' \u7968">' +
+      voteChartColHTML('pro', state.proStance || '\u6b63\u65b9', deltas ? deltas.pro : null) +
+      voteChartColHTML('con', state.conStance || '\u53cd\u65b9', deltas ? deltas.con : null) +
+    '</div>';
+  }
+
+  // \u628a\u6570\u503c\u5199\u8fdb\u5df2\u5b58\u5728\u7684 DOM \u8282\u70b9\uff08\u800c\u4e0d\u91cd\u5efa innerHTML\uff09\uff0c
+  // \u8fd9\u6837 .vote-chart-fill \u7684 CSS transition \u548c\u8ba1\u6570\u8ddf\u8fdb\u624d\u80fd\u751f\u6548
+  function applyVoteChartValues(chart, counts, deltas, animate) {
+    if (!chart) return;
+    chart.setAttribute('aria-label', '\u6b63\u65b9 ' + counts.pro + ' \u7968\uff0c\u53cd\u65b9 ' + counts.con + ' \u7968');
+    const max = Math.max(counts.pro, counts.con, 1);
+    const stances = { pro: state.proStance || '正方', con: state.conStance || '反方' };
+    ['pro', 'con'].forEach(side => {
+      const col = chart.querySelector('.vote-chart-' + side);
+      if (!col) return;
+      const stanceEl = col.querySelector('.vote-chart-stance');
+      if (stanceEl) stanceEl.textContent = stances[side];
+      const fill = col.querySelector('.vote-chart-fill');
+      if (fill) fill.style.height = voteChartHeightPct(counts[side], max).toFixed(2) + '%';
+      const countEl = col.querySelector('.vote-chart-count');
+      if (countEl) {
+        const prev = Number(countEl.dataset.value || 0);
+        const next = counts[side];
+        countEl.dataset.value = String(next);
+        if (animate && prev !== next) {
+          tweenVoteCount(countEl, prev, next);
+        } else {
+          if (countEl._voteCountRaf) { cancelAnimationFrame(countEl._voteCountRaf); countEl._voteCountRaf = null; }
+          countEl.textContent = String(next);
+        }
+      }
+      if (deltas) {
+        const deltaEl = col.querySelector('.vote-chart-delta');
+        if (deltaEl) deltaEl.textContent = voteDeltaText(deltas[side]);
+      }
+    });
+  }
+
+  // \u521a\u63d2\u5165\u7684\u8282\u70b9\u8981\u5148\u8ba9\u6d4f\u89c8\u5668\u771f\u7684\u753b\u51fa 0% \u8fd9\u4e00\u5e27\uff0c\u4e0b\u4e00\u5e27\u518d\u8bbe\u76ee\u6807\u503c\uff0cCSS transition \u624d\u4f1a\u63a5\u7ba1
+  // \uff08\u5355\u5c42 rAF \u4e0d\u591f\uff1a\u5b83\u5728\u4e0b\u4e00\u6b21\u91cd\u7ed8\u4e4b\u524d\u6267\u884c\uff0c\u53ef\u80fd\u8ddf\u63d2\u5165\u65f6\u7684\u90a3\u6b21\u91cd\u7ed8\u5408\u5e76\uff0c0% \u6839\u672c\u6ca1\u753b\u51fa\u6765\uff09\uff1b
+  // \u51cf\u52a8\u6a21\u5f0f\u4e0b\u76f4\u63a5\u4e00\u6b65\u5230\u4f4d\uff0c\u4e0d\u8d70 rAF\uff0c\u907f\u514d\u95ea\u4e00\u4e0b 0
+  function paintVoteChartFresh(chart, counts, deltas) {
+    if (!chart) return;
+    if (prefersReducedMotion()) {
+      applyVoteChartValues(chart, counts, deltas, false);
+    } else {
+      requestAnimationFrame(() => requestAnimationFrame(() => applyVoteChartValues(chart, counts, deltas, true)));
+    }
+  }
+
+  // \u8282\u70b9\u5df2\u7ecf\u5728\u9875\u9762\u4e0a\u3001\u53ea\u662f\u7968\u6570\u53d8\u4e86\uff1a\u76f4\u63a5\u6539\u503c\uff0c\u5df2\u7ecf\u753b\u51fa\u6765\u7684\u65e7\u9ad8\u5ea6/\u65e7\u6570\u5b57\u8ba9 CSS transition
+  // \u548c\u6570\u5b57\u6eda\u52a8\u52a8\u753b\u81ea\u5df1\u4ece\u65e7\u503c\u52a8\u8fc7\u53bb\uff0c\u4e0d\u9700\u8981\u518d\u7ed5 rAF
+  function paintVoteChartUpdate(chart, counts, deltas) {
+    if (!chart) return;
+    applyVoteChartValues(chart, counts, deltas, !prefersReducedMotion());
   }
 
   function renderVotePre() {
@@ -496,6 +596,17 @@
     const locked = !!snap.baseline;
     const counts = locked ? snap.baseline : snap.counts;
     const total = counts.pro + counts.con;
+    const chart = stage.querySelector('.vote-chart');
+    if (stage.dataset.voteView === 'pre' && chart && !chart.querySelector('.vote-chart-delta')) {
+      const statusEl = stage.querySelector('.vote-page-status');
+      if (statusEl) statusEl.textContent = locked ? '\u521d\u59cb\u7acb\u573a' : '\u5b9e\u65f6';
+      const totalEl = stage.querySelector('.vote-page-total');
+      if (totalEl) totalEl.textContent = '\u5171 ' + total + ' \u4eba';
+      const hintEl = stage.querySelector('.vote-page-hint');
+      if (hintEl) hintEl.textContent = locked ? '\u521d\u59cb\u7acb\u573a\u5df2\u9501\u5b9a' : '\u5728\u6295\u7968\u9762\u677f\u9501\u5b9a\u521d\u59cb\u7acb\u573a';
+      paintVoteChartUpdate(chart, counts, null);
+      return;
+    }
     stage.innerHTML =
       '<section class="vote-page vote-page-pre" aria-label="\u8d5b\u524d\u7968\u6570">' +
         '<div class="vote-page-head">' +
@@ -506,9 +617,11 @@
             '<span class="vote-page-total">\u5171 ' + total + ' \u4eba</span>' +
           '</div>' +
         '</div>' +
-        renderVoteChart(counts, null) +
+        buildVoteChartHTML(counts, null) +
         '<p class="vote-page-hint">' + (locked ? '\u521d\u59cb\u7acb\u573a\u5df2\u9501\u5b9a' : '\u5728\u6295\u7968\u9762\u677f\u9501\u5b9a\u521d\u59cb\u7acb\u573a') + '</p>' +
       '</section>';
+    stage.dataset.voteView = 'pre';
+    paintVoteChartFresh(stage.querySelector('.vote-chart'), counts, null);
   }
 
   function renderVoteFinal() {
@@ -518,6 +631,13 @@
     const deltas = snap.baseline
       ? { pro: counts.pro - snap.baseline.pro, con: counts.con - snap.baseline.con }
       : null;
+    const chart = stage.querySelector('.vote-chart');
+    if (stage.dataset.voteView === 'final' && chart && !!chart.querySelector('.vote-chart-delta') === !!deltas) {
+      const totalEl = stage.querySelector('.vote-page-total');
+      if (totalEl) totalEl.textContent = '\u5171 ' + total + ' \u4eba\u6295\u7968';
+      paintVoteChartUpdate(chart, counts, deltas);
+      return;
+    }
     stage.innerHTML =
       '<section class="vote-page vote-page-final" aria-label="\u6700\u7ec8\u7968\u6570">' +
         '<div class="vote-page-head">' +
@@ -527,14 +647,17 @@
             '<span class="vote-page-total">\u5171 ' + total + ' \u4eba\u6295\u7968</span>' +
           '</div>' +
         '</div>' +
-        renderVoteChart(counts, deltas) +
+        buildVoteChartHTML(counts, deltas) +
         (deltas ? '' : '<p class="vote-page-hint">\u672c\u6b21\u6295\u7968\u6ca1\u6709\u9501\u5b9a\u521d\u59cb\u7acb\u573a</p>') +
       '</section>';
+    stage.dataset.voteView = 'final';
+    paintVoteChartFresh(stage.querySelector('.vote-chart'), counts, deltas);
   }
 
   function onVoteUpdate() {
     const mode = curMode();
-    if (mode === 'vote-pre' || mode === 'vote-final') renderStage();
+    if (mode === 'vote-pre') renderVotePre();
+    else if (mode === 'vote-final') renderVoteFinal();
   }
 
   /* 首页队名：字多了就缩字号，正反方始终用同一个字号。
@@ -589,6 +712,7 @@
     setFieldValue('coverProStance', state.proStance || '');
     setFieldValue('coverConStance', state.conStance || '');
     fitCoverTeamNames();
+    fitCoverTopic();
   }
 
   function syncHeaderTopic() {
@@ -606,7 +730,7 @@
       });
     };
     bind('coverMatchStage', 'matchStage', 40);
-    bind('coverTopic', 'topic', 80, () => { syncHeaderTopic(); });
+    bind('coverTopic', 'topic', 80, () => { syncHeaderTopic(); fitCoverTopic(); });
     // updateTimes() 在首页会走 syncCoverFields()，顺带重新适配队名字号
     bind('coverProSchool', 'proName', 32, () => { updateTimes(); applyInputs(); });
     bind('coverConSchool', 'conName', 32, () => { updateTimes(); applyInputs(); });

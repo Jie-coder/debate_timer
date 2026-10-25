@@ -2161,11 +2161,18 @@ body[data-screen="cover"] #btnNext {
   font-family: Inter, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
   font-size: clamp(54px, 5.7vw, 104px);
   font-weight: 780;
-  line-height: 1.08;
+  line-height: 1.25;
   letter-spacing: 0;
   padding: 0 12px 8px;
   text-wrap: balance;
+  line-break: strict;
+  overflow-wrap: anywhere;
 }
+/* 辩题太长时字号按字数分档缩小，长句子也能在不溢出的行数里放完；
+   data-len 由 fitCoverTopic() 按 state.topic 的字数算，短辩题不设档，沿用上面的大字号 */
+.cover-topic-input[data-len="m"] { font-size: clamp(40px, 4.6vw, 80px); }
+.cover-topic-input[data-len="l"] { font-size: clamp(30px, 3.6vw, 60px); }
+.cover-topic-input[data-len="xl"] { font-size: clamp(22px, 2.6vw, 44px); }
 
 .cover-title-rule {
   width: clamp(64px, 7vw, 120px);
@@ -2330,6 +2337,9 @@ body[data-screen="cover"] #btnNext {
   .cover-topic-input {
     font-size: clamp(44px, 6.4vw, 78px);
   }
+  .cover-topic-input[data-len="m"] { font-size: clamp(34px, 5.2vw, 62px); }
+  .cover-topic-input[data-len="l"] { font-size: clamp(26px, 4vw, 48px); }
+  .cover-topic-input[data-len="xl"] { font-size: clamp(20px, 3vw, 36px); }
 
   .stage-duel .duel {
     min-height: min(600px, calc(100vh - 250px)) !important;
@@ -2375,6 +2385,9 @@ body[data-screen="cover"] #btnNext {
     font-size: clamp(38px, 11vw, 68px);
     min-height: 140px;
   }
+  .cover-topic-input[data-len="m"] { font-size: clamp(30px, 9vw, 54px); }
+  .cover-topic-input[data-len="l"] { font-size: clamp(24px, 7vw, 42px); }
+  .cover-topic-input[data-len="xl"] { font-size: clamp(18px, 5.4vw, 32px); }
 
   .cover-matchup {
     grid-template-columns: minmax(0, 1fr);
@@ -2805,7 +2818,7 @@ html body[data-theme="academy"] .cover-page {
 html body[data-theme="academy"] .stage-cover { padding: 8px 20px 28px; }
 /* 辩题按内容定高：只有一行时不再空出第二行，标题和装饰线挨得紧凑 */
 @supports (field-sizing: content) {
-  html body[data-theme="academy"] .cover-topic-input { field-sizing: content; height: auto; min-height: 0 !important; max-height: 2.3em; }
+  html body[data-theme="academy"] .cover-topic-input { field-sizing: content; height: auto; min-height: 0 !important; max-height: calc(var(--cover-topic-lines, 2) * 1.25em); }
 }
 /* 比赛名上方三枚小菱形，和底栏的环节菱形呼应 */
 html body[data-theme="academy"] .cover-kicker::before {
@@ -3950,7 +3963,7 @@ html body[data-theme] .header-actions { flex-shrink: 0; }
   /* 首页：辩题按内容定高，留白随屏高收缩；队名占满整行，宽度不随字号变 */
   html body[data-theme] .cover-page { gap: clamp(12px, 3.2vh, 36px) !important; padding-block: clamp(10px, 3vh, 42px) !important; }
   html body[data-theme] .cover-head { gap: clamp(8px, 2.2vh, 20px) !important; }
-  html body[data-theme] .cover-topic-input { min-height: 0 !important; height: 2.3em; }
+  html body[data-theme] .cover-topic-input { min-height: 0 !important; height: calc(var(--cover-topic-lines, 2) * 1.25em); }
   html body[data-theme] .cover-matchup { gap: 10px !important; }
   html body[data-theme] .cover-team { width: 100%; }
   html body[data-theme="soft"] .cover-team { padding: 12px 14px !important; }
@@ -4138,9 +4151,12 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
   html body[data-theme] .cover-topic-input {
     font-size: clamp(24px, 11vh, 46px) !important;
     min-height: 0 !important;
-    height: 2.3em;
+    height: calc(var(--cover-topic-lines, 2) * 1.25em);
     padding-block: 0 4px !important;
   }
+  html body[data-theme] .cover-topic-input[data-len="m"] { font-size: clamp(20px, 9vh, 38px) !important; }
+  html body[data-theme] .cover-topic-input[data-len="l"] { font-size: clamp(16px, 7vh, 30px) !important; }
+  html body[data-theme] .cover-topic-input[data-len="xl"] { font-size: clamp(13px, 5.5vh, 24px) !important; }
   html body[data-theme] .cover-title-rule { margin-top: 0 !important; }
   html body[data-theme] .cover-matchup {
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
@@ -4163,10 +4179,10 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
 /* 辩题输入框跟着内容长高（一行就一行），不支持的浏览器用上面的固定两行高 */
 @supports (field-sizing: content) {
   @media (max-width: 760px) {
-    html body[data-theme] .cover-topic-input { field-sizing: content; height: auto; max-height: 3.4em; }
+    html body[data-theme] .cover-topic-input { field-sizing: content; height: auto; max-height: calc(var(--cover-topic-lines, 3) * 1.25em); }
   }
   @media (max-height: 520px), (max-height: 700px) and (max-width: 1100px) and (orientation: landscape) {
-    html body[data-theme] .cover-topic-input { field-sizing: content; height: auto; max-height: 2.3em; }
+    html body[data-theme] .cover-topic-input { field-sizing: content; height: auto; max-height: calc(var(--cover-topic-lines, 2) * 1.25em); }
   }
 }
 
@@ -4323,23 +4339,27 @@ body[data-screen="cover"] .vote-ratio-bar { display: none !important; }
 .vote-chart-pro .vote-chart-count { color: var(--vote-pro); }
 .vote-chart-con .vote-chart-count { color: var(--vote-con); }
 .vote-chart-track {
-  width: clamp(72px, 12vw, 150px);
+  width: clamp(48px, 5vw, 96px);
   height: 100%;
   min-height: 0;
   display: flex;
   align-items: flex-end;
   border: 2px solid var(--vote-line);
-  border-radius: 2px;
+  border-radius: 999px;
   background: var(--bg-2);
   overflow: hidden;
 }
 .vote-chart-fill {
   width: 100%;
   min-height: 0;
+  border-radius: 999px;
   background: var(--vote-pro);
-  transition: height 0.3s ease;
+  transition: height 0.5s ease-out;
 }
 .vote-chart-con .vote-chart-fill { background: var(--vote-con); }
+@media (prefers-reduced-motion: reduce) {
+  .vote-chart-fill { transition: none; }
+}
 .vote-chart-stance {
   display: -webkit-box;
   max-width: 100%;
@@ -4362,9 +4382,11 @@ body[data-screen="cover"] .vote-ratio-bar { display: none !important; }
 
 html body[data-theme="neo"] .vote-chart-track {
   border-width: 3px !important;
+  border-radius: 999px !important;
   background: #fff !important;
   box-shadow: var(--lk-shadow) !important;
 }
+html body[data-theme="neo"] .vote-chart-fill { border-radius: 999px !important; }
 html body[data-theme="neo"] .vote-page-status {
   border-width: 2px !important;
   box-shadow: var(--lk-shadow) !important;
@@ -4378,7 +4400,7 @@ html body[data-theme="neo"] .vote-page-status {
   .vote-page-title { font-size: clamp(20px, 7vw, 32px); }
   .vote-chart { gap: clamp(16px, 6vw, 40px); }
   .vote-chart-count { font-size: clamp(34px, 12vw, 64px); }
-  .vote-chart-track { width: clamp(58px, 18vw, 110px); }
+  .vote-chart-track { width: clamp(44px, 12vw, 80px); }
   .vote-chart-stance { font-size: clamp(12px, 4vw, 18px); }
 }
 
@@ -4527,4 +4549,4 @@ body[data-screen="vote-pre"] .vote-ratio-bar,
 body[data-screen="vote-final"] .vote-ratio-bar { display: none !important; }
 .vote-chart { flex: 0 0 auto; }
 .vote-chart-col { height: auto; grid-template-rows: auto auto auto auto; }
-.vote-chart-track { height: clamp(80px, 17vh, 240px); min-height: 0; }
+.vote-chart-track { height: clamp(100px, 22vh, 280px); min-height: 0; }

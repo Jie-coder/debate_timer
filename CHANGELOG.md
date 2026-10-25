@@ -2,6 +2,18 @@
 
 ## 2026-10-25
 
+- 主持端赛前/最终票数页（`.vote-chart`）改成胶囊圆角柱状图：轨道和填充条都是
+  `border-radius: 999px`，六套主题（含 Neo-Brutalism 的硬投影轨道）都生效。票数变化时
+  不再整段重建 `innerHTML`（会打断 CSS transition），改成原地更新已有节点：柱子高度走
+  `height 0.5s ease-out` 过渡，数字用 `requestAnimationFrame` 从旧值数到新值；切到该环节
+  首次显示时柱子从 0 长起来（先落地在 0% 这一帧再改目标值，双层 `requestAnimationFrame`
+  确保浏览器真的画出来，不然可能被下一次重绘合并掉）。`prefers-reduced-motion: reduce` 下
+  过渡和数字滚动都关掉，直接跳到终值。
+- 首页辩题输入框按字数分档缩小字号（`fitCoverTopic()` 在 `#coverTopic` 上设
+  `data-len`/`--cover-topic-lines`，`style.css` 按 `[data-len]` 选不同的 `clamp(px, vw/vh, px)`
+  字号区间，六套主题共用同一套规则，没有主题单独覆盖字号），超长辩题多留一行、
+  `max-height`/`height` 跟着行数算，配合已有的 `text-wrap: balance` 和调高到 1.25 的
+  行高，不会被裁切；短辩题不设档，沿用原来的大字号。
 - `vote.html` 跟着计时器当前主题换皮：六套主题（Neo-Brutalism / 赛场之夜 / 学院典雅 /
   柔光卡片 / 电视转播 / 复古终端）各自的底色、字色、正反方色、边框、投影、字体都搬了过来。
   主持端（`vote-host.js`）在控制频道的 `open`/`closed`/`sync` 里带上当前主题，切主题时
