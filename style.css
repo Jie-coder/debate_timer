@@ -3606,7 +3606,7 @@ html body[data-theme="neo"] .vrb-pro { color: var(--lk-pro) !important; }
 html body[data-theme="neo"] .vrb-con { color: var(--lk-con) !important; }
 html body[data-theme="neo"] .vrb-track {
   border: 2px solid #000 !important;
-  border-radius: 0 !important;
+  border-radius: 999px !important;
   background: #fff !important;
 }
 html body[data-theme="neo"] .vrb-fill-pro { background: var(--lk-pro) !important; }

@@ -5,14 +5,131 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>现场投票</title>
 <style>
-  /* Neo-Brutalism：黄底、全黑粗边框、无虚化硬投影，和计时器主题页保持同一套色板 */
+  /* 和计时器主题页保持同一套色板：6 套主题的 token 从 style.css 的
+   * html body[data-theme="..."] { --vf-*/--lk-* ... } 搬过来，按 vote.html
+   * 自己这套更小的 UI（房间码 / 投票大按钮 / 结束横幅 / 错误提示）重新映射成
+   * --vb-* 变量。主持端在 app.js 里切主题，会通过控制频道把 theme 广播给这
+   * 个页面（见下面的脚本），这里只负责"收到主题名就套对应的 CSS 变量"。
+   */
   * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body,
+  body[data-theme="neo"] {
+    --vb-radius: 2px;
+    --vb-bg: #fffdf4;
+    --vb-surface: #ffffff;
+    --vb-ink: #0a0a0a;
+    --vb-muted: #333333;
+    --vb-pro: #0040ff;
+    --vb-con: #ff2d78;
+    --vb-btn-ink: #ffffff;
+    --vb-border: #000000;
+    --vb-border-w: 3px;
+    --vb-shadow: 6px 6px 0 #000;
+    --vb-shadow-sm: 4px 4px 0 #000;
+    --vb-font: "Helvetica Neue", Arial, "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", sans-serif;
+    --vb-ok: #0a7a3d;
+    --vb-pending: #a8720a;
+    --vb-bad: #cc0033;
+  }
+  body[data-theme="arena"] {
+    --vb-radius: 6px;
+    --vb-bg: #0b1020;
+    --vb-surface: #141b31;
+    --vb-ink: #f2f5ff;
+    --vb-muted: #9aa6c8;
+    --vb-pro: #4c8dff;
+    --vb-con: #ff6a45;
+    --vb-btn-ink: #ffffff;
+    --vb-border: #27314f;
+    --vb-border-w: 1px;
+    --vb-shadow: 0 10px 28px rgba(76, 141, 255, 0.3);
+    --vb-shadow-sm: 0 6px 16px rgba(76, 141, 255, 0.22);
+    --vb-font: "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", sans-serif;
+    --vb-ok: #39d98a;
+    --vb-pending: #ffb020;
+    --vb-bad: #ff6a6a;
+  }
+  body[data-theme="academy"] {
+    --vb-radius: 8px;
+    --vb-bg: #f6f1e7;
+    --vb-surface: #fbf8f1;
+    --vb-ink: #2a2118;
+    --vb-muted: #6e6152;
+    --vb-pro: #1f3a68;
+    --vb-con: #7a1f2b;
+    --vb-btn-ink: #fbf6ea;
+    --vb-border: #b08d57;
+    --vb-border-w: 1px;
+    --vb-shadow: 0 12px 24px rgba(42, 33, 24, 0.14);
+    --vb-shadow-sm: 0 5px 12px rgba(42, 33, 24, 0.12);
+    --vb-font: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", serif;
+    --vb-ok: #2f6f4e;
+    --vb-pending: #a8720a;
+    --vb-bad: #b0302a;
+  }
+  body[data-theme="soft"] {
+    --vb-radius: 22px;
+    --vb-bg: #ffffff;
+    --vb-surface: #f5f6fb;
+    --vb-ink: #1d2340;
+    --vb-muted: #6b7194;
+    --vb-pro: #5468ff;
+    --vb-con: #ff7a59;
+    --vb-btn-ink: #ffffff;
+    --vb-border: #e3e6f1;
+    --vb-border-w: 1px;
+    --vb-shadow: 0 16px 32px rgba(84, 104, 255, 0.2);
+    --vb-shadow-sm: 0 6px 16px rgba(84, 104, 255, 0.16);
+    --vb-font: "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", sans-serif;
+    --vb-ok: #2f9e60;
+    --vb-pending: #d98324;
+    --vb-bad: #f0445c;
+  }
+  body[data-theme="broadcast"] {
+    --vb-radius: 0;
+    --vb-bg: #111111;
+    --vb-surface: #1c1c1c;
+    --vb-ink: #ffffff;
+    --vb-muted: #c9c9c9;
+    --vb-pro: #1f5fe0;
+    --vb-con: #e23a2e;
+    --vb-btn-ink: #ffffff;
+    --vb-border: #ffd400;
+    --vb-border-w: 3px;
+    --vb-shadow: none;
+    --vb-shadow-sm: none;
+    --vb-font: "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", sans-serif;
+    --vb-ok: #2ecc71;
+    --vb-pending: #ffd400;
+    --vb-bad: #ff5c4d;
+  }
+  body[data-theme="terminal"] {
+    --vb-radius: 2px;
+    --vb-bg: #050a06;
+    --vb-surface: #0a150c;
+    --vb-ink: #39ff88;
+    --vb-muted: #22b862;
+    --vb-pro: #39ff88;
+    --vb-con: #ffb000;
+    --vb-btn-ink: #050a06;
+    --vb-border: #1c5c34;
+    --vb-border-w: 1px;
+    --vb-shadow: 0 0 18px rgba(57, 255, 136, 0.25);
+    --vb-shadow-sm: 0 0 10px rgba(57, 255, 136, 0.2);
+    --vb-font: "Cascadia Mono", "Consolas", "JetBrains Mono", "Microsoft YaHei UI", monospace;
+    --vb-ok: #39ff88;
+    --vb-pending: #ffb000;
+    --vb-bad: #ff5050;
+  }
+
   html, body {
     height: 100%;
-    background: #ffe600;
-    color: #0a0a0a;
-    font-family: "Helvetica Neue", Arial, "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", sans-serif;
+    background: var(--vb-bg);
+    color: var(--vb-ink);
+    font-family: var(--vb-font);
     -webkit-font-smoothing: antialiased;
+    transition: background 0.2s ease, color 0.2s ease;
   }
   body {
     display: flex;
@@ -34,11 +151,13 @@
     font-size: 13px;
     font-weight: 800;
     letter-spacing: 0.08em;
-    color: #0a0a0a;
-    background: #fff;
-    border: 2px solid #000;
-    border-radius: 2px;
-    padding: 4px 10px;
+    color: var(--vb-ink);
+    background: var(--vb-surface);
+    border: var(--vb-border-w) solid var(--vb-border);
+    /* 票数条同款胶囊圆角：不管主题本身是方角还是圆角，投票相关的条 / 按钮 /
+       提示都统一用 999px，呼应主计时页 .vrb-track 的票数条形状 */
+    border-radius: 999px;
+    padding: 4px 14px;
     align-self: center;
     font-family: "JetBrains Mono", monospace;
   }
@@ -46,16 +165,16 @@
     text-align: center;
     font-size: 12px;
     font-weight: 700;
-    color: #333;
+    color: var(--vb-muted);
   }
-  .status-ok { color: #0a7a3d; }
-  .status-pending { color: #a8720a; }
-  .status-bad { color: #cc0033; }
+  .status-ok { color: var(--vb-ok); }
+  .status-pending { color: var(--vb-pending); }
+  .status-bad { color: var(--vb-bad); }
   .current {
     text-align: center;
     font-size: 15px;
     font-weight: 700;
-    color: #0a0a0a;
+    color: var(--vb-ink);
     min-height: 1.4em;
   }
   .buttons {
@@ -68,50 +187,51 @@
   .side-btn {
     flex: 1;
     min-height: 140px;
-    border-radius: 2px;
-    border: 4px solid #000;
-    box-shadow: 6px 6px 0 #000;
+    border-radius: var(--vb-radius, 2px);
+    border: var(--vb-border-w) solid var(--vb-border);
+    box-shadow: var(--vb-shadow);
     font-size: 34px;
     font-weight: 900;
     letter-spacing: 0.06em;
     cursor: pointer;
-    color: #fff;
-    transition: transform 0.08s ease, box-shadow 0.08s ease, opacity 0.12s ease;
+    color: var(--vb-btn-ink);
+    font-family: var(--vb-font);
+    transition: transform 0.08s ease, box-shadow 0.08s ease, opacity 0.12s ease, background 0.2s ease;
     -webkit-tap-highlight-color: transparent;
   }
-  .side-btn:active { transform: translate(5px, 5px); box-shadow: 1px 1px 0 #000; }
-  .side-btn:disabled { opacity: 0.4; cursor: default; transform: none; box-shadow: 6px 6px 0 #000; }
-  .side-pro { background: #0040ff; }
-  .side-con { background: #ff2d78; }
-  .side-btn.active { background: #ffe600; color: #000; box-shadow: 6px 6px 0 #000, inset 0 0 0 4px #000; }
+  .side-btn:active { transform: scale(0.98); }
+  .side-btn:disabled { opacity: 0.4; cursor: default; transform: none; }
+  .side-pro { background: var(--vb-pro); }
+  .side-con { background: var(--vb-con); }
+  .side-btn.active { box-shadow: var(--vb-shadow), inset 0 0 0 4px var(--vb-ink); }
   .closed-banner {
     text-align: center;
     font-size: 16px;
     font-weight: 800;
-    color: #000;
+    color: var(--vb-ink);
     padding: 10px;
-    border: 3px solid #000;
-    border-radius: 2px;
-    background: #ffe600;
-    box-shadow: 4px 4px 0 #000;
+    border: var(--vb-border-w) solid var(--vb-border);
+    border-radius: var(--vb-radius, 2px);
+    background: var(--vb-surface);
+    box-shadow: var(--vb-shadow-sm);
   }
   .error {
     text-align: center;
     font-size: 15px;
     font-weight: 700;
-    color: #0a0a0a;
+    color: var(--vb-ink);
     line-height: 1.6;
     margin: auto 0;
-    padding: 14px;
-    border: 3px solid #000;
-    border-radius: 2px;
-    background: #fff;
+    padding: 14px 22px;
+    border: var(--vb-border-w) solid var(--vb-border);
+    border-radius: var(--vb-radius, 2px);
+    background: var(--vb-surface);
   }
   .footer-hint {
     text-align: center;
     font-size: 11px;
     font-weight: 700;
-    color: #333;
+    color: var(--vb-muted);
   }
 </style>
 </head>
@@ -202,6 +322,12 @@
     var mySide = loadSides()[room] || null;
     var votingClosed = false;
 
+    var THEMES = ['neo', 'arena', 'academy', 'soft', 'broadcast', 'terminal'];
+    function applyTheme(theme) {
+      document.body.dataset.theme = (THEMES.indexOf(theme) >= 0) ? theme : 'neo';
+    }
+    applyTheme('neo'); // 默认 Neo-Brutalism，收到主持端第一次 sync/open/closed 后会切成真实主题
+
     function renderCurrent() {
       if (mySide === 'pro') currentEl.textContent = '你当前投给：正方';
       else if (mySide === 'con') currentEl.textContent = '你当前投给：反方';
@@ -278,6 +404,7 @@
 
     function handlePayload(payload) {
       if (!payload || typeof payload !== 'object') return;
+      if (payload.theme) applyTheme(payload.theme);
       if (payload.type === 'sync') sendVote();
       else if (payload.type === 'closed') applyClosed(true);
       else if (payload.type === 'open') applyClosed(false);
@@ -309,6 +436,10 @@
           setStatus('已连接', 'ok');
           // 刚连上（包括重连）：重发一次自己当前的票，不用等主持端的 sync
           sendVote();
+          // 主持端可能早就开着房间了（晚进来的观众错过了它连上时广播的那一次
+          // open/closed + sync + theme），主动要一次，这样主题和开关状态不会
+          // 要等到主持端下一次操作才同步过来
+          sendBroadcast(ctlChannel, { type: 'hello' });
         } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           if (ctlChannel === ch) ctlChannel = null;
           setStatus('连接中断，重试中…', 'bad');

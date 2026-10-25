@@ -324,12 +324,27 @@
     return (state.phase === 'idle' || state.phase === 'closed') ? 'closed' : 'open';
   }
 
+  // 计时器当前主题（app.js 设在 <body data-theme>），投票页要跟着同步显示。
+  function currentTheme() {
+    var t = document.body && document.body.dataset ? document.body.dataset.theme : '';
+    return t || 'neo';
+  }
+
   function broadcastMsg(payload) {
     if (!ctlChannel) return;
     try { ctlChannel.send({ type: 'broadcast', event: 'msg', payload: payload }); } catch (e) {}
   }
-  function broadcastPhase() { broadcastMsg({ type: openOrClosedType() }); }
-  function broadcastSync() { broadcastMsg({ type: 'sync' }); }
+  function broadcastPhase() { broadcastMsg({ type: openOrClosedType(), theme: currentTheme() }); }
+  function broadcastSync() { broadcastMsg({ type: 'sync', theme: currentTheme() }); }
+  function broadcastTheme() { broadcastMsg({ type: 'theme', theme: currentTheme() }); }
+
+  // 主题切换时（设置抽屉里选新主题）同步广播给已连接的观众。
+  var themeObserver = null;
+  function watchTheme() {
+    if (themeObserver || typeof MutationObserver === 'undefined' || !document.body) return;
+    themeObserver = new MutationObserver(broadcastTheme);
+    themeObserver.observe(document.body, { attributes: true, attributeFilter: ['data-theme'] });
+  }
 
   function handleIncoming(payload) {
     if (!payload || payload.type !== 'vote') return;
@@ -338,6 +353,14 @@
       updateCountsUI();
       notifyUpdate();
     }
+  }
+
+  // 观众刚连上控制频道时会主动要一次 sync（见 vote.html 的 hello），
+  // 这样晚进来的观众也能拿到当前的开/关状态和主题，不用等下一次主持端操作。
+  function handleCtlIncoming(payload) {
+    if (!payload || payload.type !== 'hello') return;
+    broadcastPhase();
+    broadcastSync();
   }
 
   function scheduleReconnect() {
@@ -368,6 +391,7 @@
     });
 
     var ctl = client.channel('room-' + state.room + '-ctl');
+    ctl.on('broadcast', { event: 'msg' }, function (msg) { handleCtlIncoming(msg && msg.payload); });
     ctl.subscribe(function (status) {
       if (destroyed) return;
       if (status === 'SUBSCRIBED') {
@@ -542,6 +566,7 @@
     wireEvents();
     setEnabled(state.enabled);
     render();
+    watchTheme();
     if (hasConfig()) connect();
   }
 
