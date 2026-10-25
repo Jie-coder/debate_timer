@@ -4596,6 +4596,35 @@ html body[data-theme] .cover-topic-input {
   html body[data-theme] .vote-lock-btn { padding-block: 6px !important; min-height: 0 !important; }
 }
 
+/* 票数页柱子加高：图表占满标题和底部（提示/锁票按钮）之间的全部空间，领先一方的柱子用满高度。 */
+html body[data-theme][data-screen="vote-pre"] .stage,
+html body[data-theme][data-screen="vote-final"] .stage { display: flex; flex-direction: column; min-height: 0; }
+html body[data-theme] .vote-page { flex: 1 1 auto; min-height: 0; height: 100%; display: flex; flex-direction: column; }
+html body[data-theme] .vote-page > .vote-chart { flex: 1 1 0; min-height: 0; align-items: stretch; }
+html body[data-theme] .vote-page .vote-chart-col { height: 100%; min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr) auto auto; }
+html body[data-theme] .vote-page .vote-chart-track { height: auto !important; min-height: 0; align-self: stretch; }
+html body[data-theme] .vote-page .vote-chart-track { --vc-reserve: calc(clamp(40px, 7.5vw, 104px) * 0.9 + clamp(4px, 1vh, 10px) + 4px); }
+html body[data-theme] .vote-page .vote-chart-fill { max-height: none; }
+@media (max-height: 820px) {
+  html body[data-theme] .vote-page .vote-chart-track { --vc-reserve: calc(clamp(26px, 6vh, 46px) + 8px); }
+}
+@media (max-width: 760px) {
+  html body[data-theme] .vote-page .vote-chart-track { --vc-reserve: calc(clamp(34px, 12vw, 64px) * 0.9 + 14px); }
+}
+
+/* 票数页给柱子腾空间：页头去掉辩题输入框、收紧内边距；标题区更紧凑；提示和锁票按钮并成一行 */
+html body[data-theme][data-screen^="vote-"] header .brand-topic { display: none !important; }
+html body[data-theme][data-screen^="vote-"] header { padding-top: clamp(12px, 2.4vh, 32px) !important; padding-bottom: 4px !important; }
+html body[data-theme][data-screen^="vote-"] footer { padding-top: 4px !important; padding-bottom: clamp(10px, 2.4vh, 32px) !important; }
+html body[data-theme][data-screen^="vote-"] main { padding-bottom: 4px !important; }
+html body[data-theme] .vote-page { row-gap: clamp(4px, 1.2vh, 14px) !important; padding-bottom: 0 !important; }
+html body[data-theme] .vote-page-head { row-gap: 2px !important; gap: 2px !important; }
+html body[data-theme] .vote-page-title { font-size: clamp(26px, 5.6vh, 64px) !important; line-height: 1.05 !important; margin: 0 !important; }
+html body[data-theme] .vote-page-eyebrow { display: none !important; }
+html body[data-theme] .vote-page .vote-chart-col { row-gap: clamp(2px, 0.6vh, 8px) !important; gap: clamp(2px, 0.6vh, 8px) !important; }
+html body[data-theme] .vote-page-pre .vote-page-hint { display: none; }
+html body[data-theme] .vote-page-actions { margin-top: 0 !important; }
+
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js" defer></script>
@@ -6302,7 +6331,8 @@ html body[data-theme] .cover-topic-input {
       const stanceEl = col.querySelector('.vote-chart-stance');
       if (stanceEl) stanceEl.textContent = stances[side];
       const fill = col.querySelector('.vote-chart-fill');
-      if (fill) fill.style.height = voteChartHeightPct(counts[side], max).toFixed(2) + '%';
+      // 领先一方用满「轨道高度 − 柱顶数字」的全部空间，另一方按比例
+      if (fill) fill.style.height = 'calc((100% - var(--vc-reserve, 0px)) * ' + (voteChartHeightPct(counts[side], max) / 100).toFixed(4) + ')';
       const countEl = col.querySelector('.vote-chart-count');
       if (countEl) {
         const prev = Number(countEl.dataset.value || 0);

@@ -607,7 +607,8 @@
       const stanceEl = col.querySelector('.vote-chart-stance');
       if (stanceEl) stanceEl.textContent = stances[side];
       const fill = col.querySelector('.vote-chart-fill');
-      if (fill) fill.style.height = voteChartHeightPct(counts[side], max).toFixed(2) + '%';
+      // 领先一方用满「轨道高度 − 柱顶数字」的全部空间，另一方按比例
+      if (fill) fill.style.height = 'calc((100% - var(--vc-reserve, 0px)) * ' + (voteChartHeightPct(counts[side], max) / 100).toFixed(4) + ')';
       const countEl = col.querySelector('.vote-chart-count');
       if (countEl) {
         const prev = Number(countEl.dataset.value || 0);
