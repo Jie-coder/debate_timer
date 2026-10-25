@@ -2175,12 +2175,6 @@ body[data-screen="cover"] #btnNext {
   line-break: strict;
   overflow-wrap: anywhere;
 }
-/* 辩题太长时字号按字数分档缩小，长句子也能在不溢出的行数里放完；
-   data-len 由 fitCoverTopic() 按 state.topic 的字数算，短辩题不设档，沿用上面的大字号 */
-.cover-topic-input[data-len="m"] { font-size: clamp(40px, 4.6vw, 80px); }
-.cover-topic-input[data-len="l"] { font-size: clamp(30px, 3.6vw, 60px); }
-.cover-topic-input[data-len="xl"] { font-size: clamp(22px, 2.6vw, 44px); }
-
 .cover-title-rule {
   width: clamp(64px, 7vw, 120px);
   height: 4px;
@@ -2344,9 +2338,6 @@ body[data-screen="cover"] #btnNext {
   .cover-topic-input {
     font-size: clamp(44px, 6.4vw, 78px);
   }
-  .cover-topic-input[data-len="m"] { font-size: clamp(34px, 5.2vw, 62px); }
-  .cover-topic-input[data-len="l"] { font-size: clamp(26px, 4vw, 48px); }
-  .cover-topic-input[data-len="xl"] { font-size: clamp(20px, 3vw, 36px); }
 
   .stage-duel .duel {
     min-height: min(600px, calc(100vh - 250px)) !important;
@@ -2392,9 +2383,6 @@ body[data-screen="cover"] #btnNext {
     font-size: clamp(38px, 11vw, 68px);
     min-height: 140px;
   }
-  .cover-topic-input[data-len="m"] { font-size: clamp(30px, 9vw, 54px); }
-  .cover-topic-input[data-len="l"] { font-size: clamp(24px, 7vw, 42px); }
-  .cover-topic-input[data-len="xl"] { font-size: clamp(18px, 5.4vw, 32px); }
 
   .cover-matchup {
     grid-template-columns: minmax(0, 1fr);
@@ -3664,9 +3652,27 @@ html body[data-theme="neo"] .vqf-url { font-weight: 700 !important; }
 #themeGroup { flex-wrap: wrap !important; gap: 8px !important; }
 #themeGroup .chip { white-space: nowrap !important; padding: 6px 12px !important; }
 
-/* 首页卡片：大屏时撑满可用高度；窄屏内容放不下时卡片随内容变高，首页可滚动，不再裁掉学校名 */
-html body[data-theme] .cover-page { height: auto !important; min-height: 100% !important; }
+/* 首页卡片：大屏时撑满可用高度；窄屏内容放不下时卡片随内容变高，首页可滚动，不再裁掉学校名。
+   .cover-page 是 .stage-cover（flex 列）的子项，默认 flex-shrink:1 会在内容比可用高度还高时
+   把卡片压扁，压出辩题顶上那半截诡异的负边距；锁 flex-shrink:0 让它按内容撑开，超出部分交给
+   .stage-cover 的 overflow-y:auto 滚动，而不是被挤扁。 */
+html body[data-theme] .cover-page { height: auto !important; min-height: 100% !important; flex-shrink: 0 !important; }
 html body .stage-cover { overflow-y: auto !important; }
+
+/* 大屏首页：卡片用满舞台宽度，辩题输入框吃满卡片内宽——长中文辩题少换几行；
+   纵向内边距和间距略收，尽量让 3–4 行标题和对阵区落在一屏内。内容变多时卡片
+   继续按内容增高，最终仍由上面的 .stage-cover 滚动兜底。 */
+@media (min-width: 1181px) {
+  html body[data-theme] .cover-page {
+    width: min(100%, 1680px) !important;
+    max-width: min(100%, 1680px) !important;
+    padding: clamp(16px, 2.4vh, 34px) clamp(40px, 5vw, 84px) !important;
+    gap: clamp(12px, 2.4vh, 32px) !important;
+  }
+  html body[data-theme] .cover-head { gap: clamp(8px, 1.6vh, 20px) !important; }
+  html body[data-theme] .cover-topic-input { width: 100% !important; }
+  html body[data-theme] .cover-team { gap: clamp(8px, 1.2vh, 16px) !important; }
+}
 
 /* 双计时左右并排时只有一行：基础样式里的 1fr 1fr 是旧的上下布局，宽屏上会多出一条空行，
    让面板撑不满（学院典雅的上下框线会露出来） */
@@ -4161,9 +4167,6 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
     height: calc(var(--cover-topic-lines, 2) * 1.25em);
     padding-block: 0 4px !important;
   }
-  html body[data-theme] .cover-topic-input[data-len="m"] { font-size: clamp(20px, 9vh, 38px) !important; }
-  html body[data-theme] .cover-topic-input[data-len="l"] { font-size: clamp(16px, 7vh, 30px) !important; }
-  html body[data-theme] .cover-topic-input[data-len="xl"] { font-size: clamp(13px, 5.5vh, 24px) !important; }
   html body[data-theme] .cover-title-rule { margin-top: 0 !important; }
   html body[data-theme] .cover-matchup {
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
@@ -4255,8 +4258,8 @@ body[data-screen="cover"] .vote-ratio-bar { display: none !important; }
   padding: clamp(10px, 2.4vh, 30px) clamp(12px, 4vw, 48px);
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  justify-content: safe center;
+  justify-content: flex-start;
+  justify-content: safe flex-start;
   align-items: stretch;
   gap: clamp(12px, 2.6vh, 30px);
   color: var(--ink);
@@ -4330,7 +4333,7 @@ body[data-screen="cover"] .vote-ratio-bar { display: none !important; }
   height: 100%;
   min-height: 0;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-rows: minmax(0, 1fr) auto auto;
   align-items: end;
   justify-items: center;
   gap: clamp(4px, 1vh, 12px);
@@ -4342,26 +4345,31 @@ body[data-screen="cover"] .vote-ratio-bar { display: none !important; }
   font-weight: 900;
   line-height: 0.9;
   font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 }
 .vote-chart-pro .vote-chart-count { color: var(--vote-pro); }
 .vote-chart-con .vote-chart-count { color: var(--vote-con); }
+/* 轨道本身不可见，只是给数字 + 柱子定一个底部对齐的布局区；数字跟柱子一起长高、
+   始终贴在柱顶上方 */
 .vote-chart-track {
-  width: clamp(48px, 5vw, 96px);
+  --vote-bar-w: clamp(64px, 6.5vw, 128px);
+  width: var(--vote-bar-w);
   height: 100%;
   min-height: 0;
   display: flex;
-  align-items: flex-end;
-  border: 2px solid var(--vote-line);
-  border-radius: 999px;
-  background: var(--bg-2);
-  overflow: hidden;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: clamp(4px, 1vh, 10px);
 }
 .vote-chart-fill {
   width: 100%;
-  min-height: 0;
+  min-height: var(--vote-bar-w);
+  max-height: calc(100% - clamp(40px, 7.5vw, 104px) * 0.9 - clamp(4px, 1vh, 10px));
   border-radius: 999px;
   background: var(--vote-pro);
   transition: height 0.5s ease-out;
+  flex-shrink: 0;
 }
 .vote-chart-con .vote-chart-fill { background: var(--vote-con); }
 @media (prefers-reduced-motion: reduce) {
@@ -4387,13 +4395,6 @@ body[data-screen="cover"] .vote-ratio-bar { display: none !important; }
   line-height: 1;
 }
 
-html body[data-theme="neo"] .vote-chart-track {
-  border-width: 3px !important;
-  border-radius: 999px !important;
-  background: #fff !important;
-  box-shadow: var(--lk-shadow) !important;
-}
-html body[data-theme="neo"] .vote-chart-fill { border-radius: 999px !important; }
 html body[data-theme="neo"] .vote-page-status {
   border-width: 2px !important;
   box-shadow: var(--lk-shadow) !important;
@@ -4407,7 +4408,8 @@ html body[data-theme="neo"] .vote-page-status {
   .vote-page-title { font-size: clamp(20px, 7vw, 32px); }
   .vote-chart { gap: clamp(16px, 6vw, 40px); }
   .vote-chart-count { font-size: clamp(34px, 12vw, 64px); }
-  .vote-chart-track { width: clamp(44px, 12vw, 80px); }
+  .vote-chart-fill { max-height: calc(100% - clamp(34px, 12vw, 64px) * 0.9 - clamp(4px, 1vh, 10px)); }
+  .vote-chart-track { --vote-bar-w: clamp(58px, 15.6vw, 104px); width: var(--vote-bar-w); }
   .vote-chart-stance { font-size: clamp(12px, 4vw, 18px); }
 }
 
@@ -4418,6 +4420,7 @@ html body[data-theme="neo"] .vote-page-status {
   }
   .vote-page-title { font-size: clamp(20px, 3.4vw, 36px); }
   .vote-chart-count { font-size: clamp(30px, 6vw, 72px); }
+  .vote-chart-fill { max-height: calc(100% - clamp(30px, 6vw, 72px) * 0.9 - clamp(4px, 1vh, 10px)); }
   .vote-chart-stance { font-size: clamp(12px, 1.6vw, 18px); }
 }
 
@@ -4555,8 +4558,23 @@ html body[data-theme="neo"] .vote-page-status {
 body[data-screen="vote-pre"] .vote-ratio-bar,
 body[data-screen="vote-final"] .vote-ratio-bar { display: none !important; }
 .vote-chart { flex: 0 0 auto; }
-.vote-chart-col { height: auto; grid-template-rows: auto auto auto auto; }
-.vote-chart-track { height: clamp(100px, 22vh, 280px); min-height: 0; }
+.vote-chart-col { height: auto; grid-template-rows: auto auto auto; }
+.vote-chart-track { height: clamp(140px, 34vh, 400px); min-height: 0; }
+
+/* 票数页整体上移：去掉 main 顶部留白，图表更高 */
+body[data-screen="vote-pre"] main,
+body[data-screen="vote-final"] main { padding-top: clamp(0px, 0.6vh, 8px) !important; padding-bottom: clamp(8px, 1.6vh, 24px) !important; }
+body[data-screen="vote-pre"] .vote-page,
+body[data-screen="vote-final"] .vote-page { padding-top: 0 !important; }
+.vote-chart-track { height: clamp(150px, 40vh, 460px); }
+@media (max-height: 820px) {
+  html body[data-theme] .vote-chart-track { height: clamp(110px, 24vh, 200px); --vote-bar-w: clamp(44px, 5vw, 76px); width: var(--vote-bar-w); gap: 2px; }
+  html body[data-theme] .vote-chart-count { font-size: clamp(26px, 6vh, 46px) !important; line-height: 1 !important; }
+  html body[data-theme] .vote-chart-fill { min-height: 14px; max-height: calc(100% - clamp(26px, 6vh, 46px) - 4px); }
+  html body[data-theme] .vote-chart-col { row-gap: 2px; }
+  body[data-screen="vote-pre"] .vote-page-head,
+  body[data-screen="vote-final"] .vote-page-head { gap: 2px; }
+}
 
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
@@ -6079,23 +6097,59 @@ body[data-screen="vote-final"] .vote-ratio-bar { display: none !important; }
     fitCoverTopic();
   }
 
-  // 辩题字数分档：短辩题沿用默认大字号（不设 data-len），长辩题逐档缩字号、多留一行，
-  // 对应 style.css 里 .cover-topic-input[data-len] 和 --cover-topic-lines 两套规则
-  const COVER_TOPIC_BUCKETS = [
-    { max: 14, len: null, lines: 2 },
-    { max: 26, len: 'm', lines: 2 },
-    { max: 44, len: 'l', lines: 3 },
-    { max: Infinity, len: 'xl', lines: 3 },
-  ];
+  // 辩题字号固定不缩；长辩题靠多撑行高来放完文字。实际行数量不出来（text-wrap: balance
+  // 换行点跟字宽有关，没法从字数直接推算），所以让浏览器先按 scrollHeight 自己撑一次，
+  // 量出高度后再换算成行数，写进 --cover-topic-lines 给 style.css 里按行数算的 max-height
+  // 兜底规则用（field-sizing 不支持的浏览器、极矮视口等）。
   function fitCoverTopic() {
     const el = document.getElementById('coverTopic');
-    if (!el) return;
-    const len = (el.value || '').length;
-    const bucket = COVER_TOPIC_BUCKETS.find(b => len <= b.max) || COVER_TOPIC_BUCKETS[COVER_TOPIC_BUCKETS.length - 1];
-    if (bucket.len) el.dataset.len = bucket.len;
-    else delete el.dataset.len;
-    el.rows = bucket.lines;
-    el.style.setProperty('--cover-topic-lines', bucket.lines);
+    if (!el || typeof getComputedStyle !== 'function') return;
+    el.style.maxWidth = '';
+    el.style.marginInline = '';
+    el.style.textWrap = '';
+    preferCommaBreak(el);
+    el.style.height = 'auto';
+    const scrollH = el.scrollHeight;
+    el.style.height = scrollH + 'px';
+    const lineHeight = parseFloat(getComputedStyle(el).fontSize) * 1.25;
+    const lines = lineHeight > 0 ? Math.max(2, Math.ceil(scrollH / lineHeight)) : 2;
+    el.style.setProperty('--cover-topic-lines', lines);
+  }
+
+  // 两行就能放下的题目，如果中间附近有逗号等标点，就把输入框收窄到“逗号前/后”两段中较宽的那段，
+  // 让换行落在标点后面，而不是把一个词（如“工作”）拆开。不改字号，也不改用户输入的文字。
+  function preferCommaBreak(el) {
+    const text = (el.value || '').trim();
+    if (!text || /\n/.test(text)) return;
+    const cs = getComputedStyle(el);
+    const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+    const avail = el.clientWidth - padX;
+    if (avail <= 0) return;
+    const probe = document.createElement('span');
+    probe.style.cssText = 'position:absolute;visibility:hidden;white-space:pre;left:-9999px;top:0';
+    ['fontFamily', 'fontSize', 'fontWeight', 'letterSpacing', 'fontStyle'].forEach(k => { probe.style[k] = cs[k]; });
+    document.body.appendChild(probe);
+    const w = t => { probe.textContent = t; return probe.getBoundingClientRect().width; };
+    try {
+      const full = w(text);
+      if (full <= avail || full > avail * 2) return;
+      let best = null;
+      for (let i = 0; i < text.length - 1; i++) {
+        if (!/[，,；;：:？?！!、]/.test(text[i])) continue;
+        const r = (i + 1) / text.length;
+        if (r < 0.3 || r > 0.7) continue;
+        const a = w(text.slice(0, i + 1)), b = w(text.slice(i + 1));
+        const m = Math.max(a, b);
+        if (m <= avail && (!best || Math.abs(r - 0.5) < best.d)) best = { m, d: Math.abs(r - 0.5) };
+      }
+      if (best) {
+        el.style.maxWidth = Math.ceil(best.m + padX + 4) + 'px';
+        el.style.marginInline = 'auto';
+        el.style.textWrap = 'wrap'; // 宽度已卡在标点处，用普通换行，避免 balance 又把断点挪走
+      }
+    } finally {
+      probe.remove();
+    }
   }
 
   function voteSnapshot() {
@@ -6155,8 +6209,8 @@ body[data-screen="vote-final"] .vote-ratio-bar { display: none !important; }
 
   function voteChartColHTML(side, stance, delta) {
     return '<div class="vote-chart-col vote-chart-' + side + '">' +
-      '<div class="vote-chart-count" data-value="0">0</div>' +
       '<div class="vote-chart-track">' +
+        '<div class="vote-chart-count" data-value="0">0</div>' +
         '<div class="vote-chart-fill" style="height:0%"></div>' +
       '</div>' +
       '<div class="vote-chart-stance">' + escapeHtml(stance) + '</div>' +
@@ -7423,8 +7477,9 @@ body[data-screen="vote-final"] .vote-ratio-bar { display: none !important; }
     document.querySelectorAll('#fontGroup .chip').forEach(c => {
       c.classList.toggle('active', parseFloat(c.dataset.scale) === state.fontScale);
     });
-    // 各主题字体、字重不同，队名要重新量
+    // 各主题字体、字重不同，队名和辩题都要重新量
     fitCoverTeamNames();
+    fitCoverTopic();
   }
 
   
