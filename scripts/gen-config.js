@@ -16,10 +16,12 @@ const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
 const VOTE_BASE_URL = process.env.VOTE_BASE_URL || '';
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  console.warn('[gen-config] SUPABASE_URL / SUPABASE_ANON_KEY 未设置，生成的 config.js 里投票功能会保持未配置状态。');
+  // 仓库里已经提交了一份 config.js（GitHub Pages 用），环境变量没设时保留它，不要覆盖成空配置。
+  console.warn('[gen-config] SUPABASE_URL / SUPABASE_ANON_KEY 未设置，保留仓库里现有的 config.js。');
+  process.exit(0);
 }
 
-const content = `// 由 scripts/gen-config.js 从环境变量自动生成，不要手动改，也不要提交到 git。
+const content = `// 由 scripts/gen-config.js 从环境变量自动生成，只含公开的 publishable/anon key（GitHub Pages 直接用这份）。
 window.DEBATE_VOTE_CONFIG = {
   SUPABASE_URL: ${jsStr(SUPABASE_URL)},
   SUPABASE_ANON_KEY: ${jsStr(SUPABASE_ANON_KEY)},
