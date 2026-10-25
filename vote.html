@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>现场投票</title>
+<style>
+  /* 和计时器主题页保持同一套色板：6 套主题的 token 从 style.css 的
+   * html body[data-theme="..."] { --vf-*/--lk-* ... } 搬过来，按 vote.html
+   * 自己这套更小的 UI（房间码 / 投票大按钮 / 结束横幅 / 错误提示）重新映射成
+   * --vb-* 变量。主持端在 app.js 里切主题，会通过控制频道把 theme 广播给这
+   * 个页面（见下面的脚本），这里只负责"收到主题名就套对应的 CSS 变量"。
+   */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body,
+  body[data-theme="neo"] {
+    --vb-radius: 2px;
+    --vb-bg: #fffdf4;
+    --vb-surface: #ffffff;
+    --vb-ink: #0a0a0a;
+    --vb-muted: #333333;
+    --vb-pro: #0040ff;
+    --vb-con: #ff2d78;
+    --vb-btn-ink: #ffffff;
+    --vb-border: #000000;
+    --vb-border-w: 3px;
+    --vb-shadow: 6px 6px 0 #000;
+    --vb-shadow-sm: 4px 4px 0 #000;
+    --vb-font: "Helvetica Neue", Arial, "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", sans-serif;
+    --vb-ok: #0a7a3d;
+    --vb-pending: #a8720a;
+    --vb-bad: #cc0033;
+  }
+  body[data-theme="arena"] {
+    --vb-radius: 6px;
+    --vb-bg: #0b1020;
+    --vb-surface: #141b31;
+    --vb-ink: #f2f5ff;
+    --vb-muted: #9aa6c8;
+    --vb-pro: #4c8dff;
+    --vb-con: #ff6a45;
+    --vb-btn-ink: #ffffff;
+    --vb-border: #27314f;
+    --vb-border-w: 1px;
+    --vb-shadow: 0 10px 28px rgba(76, 141, 255, 0.3);
+    --vb-shadow-sm: 0 6px 16px rgba(76, 141, 255, 0.22);
+    --vb-font: "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", sans-serif;
+    --vb-ok: #39d98a;
+    --vb-pending: #ffb020;
+    --vb-bad: #ff6a6a;
+  }
+  body[data-theme="academy"] {
+    --vb-radius: 8px;
+    --vb-bg: #f6f1e7;
+    --vb-surface: #fbf8f1;
+    --vb-ink: #2a2118;
+    --vb-muted: #6e6152;
+    --vb-pro: #1f3a68;
+    --vb-con: #7a1f2b;
+    --vb-btn-ink: #fbf6ea;
+    --vb-border: #b08d57;
+    --vb-border-w: 1px;
+    --vb-shadow: 0 12px 24px rgba(42, 33, 24, 0.14);
+    --vb-shadow-sm: 0 5px 12px rgba(42, 33, 24, 0.12);
+    --vb-font: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", serif;
+    --vb-ok: #2f6f4e;
+    --vb-pending: #a8720a;
+    --vb-bad: #b0302a;
+  }
+  body[data-theme="soft"] {
+    --vb-radius: 22px;
+    --vb-bg: #ffffff;
+    --vb-surface: #f5f6fb;
+    --vb-ink: #1d2340;
+    --vb-muted: #6b7194;
+    --vb-pro: #5468ff;
+    --vb-con: #ff7a59;
+    --vb-btn-ink: #ffffff;
+    --vb-border: #e3e6f1;
+    --vb-border-w: 1px;
+    --vb-shadow: 0 16px 32px rgba(84, 104, 255, 0.2);
+    --vb-shadow-sm: 0 6px 16px rgba(84, 104, 255, 0.16);
+    --vb-font: "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", sans-serif;
+    --vb-ok: #2f9e60;
+    --vb-pending: #d98324;
+    --vb-bad: #f0445c;
+  }
+  body[data-theme="broadcast"] {
+    --vb-radius: 0;
+    --vb-bg: #111111;
+    --vb-surface: #1c1c1c;
+    --vb-ink: #ffffff;
+    --vb-muted: #c9c9c9;
+    --vb-pro: #1f5fe0;
+    --vb-con: #e23a2e;
+    --vb-btn-ink: #ffffff;
+    --vb-border: #ffd400;
+    --vb-border-w: 3px;
+    --vb-shadow: none;
+    --vb-shadow-sm: none;
+    --vb-font: "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", sans-serif;
+    --vb-ok: #2ecc71;
+    --vb-pending: #ffd400;
+    --vb-bad: #ff5c4d;
+  }
+  body[data-theme="terminal"] {
+    --vb-radius: 2px;
+    --vb-bg: #050a06;
+    --vb-surface: #0a150c;
+    --vb-ink: #39ff88;
+    --vb-muted: #22b862;
+    --vb-pro: #39ff88;
+    --vb-con: #ffb000;
+    --vb-btn-ink: #050a06;
+    --vb-border: #1c5c34;
+    --vb-border-w: 1px;
+    --vb-shadow: 0 0 18px rgba(57, 255, 136, 0.25);
+    --vb-shadow-sm: 0 0 10px rgba(57, 255, 136, 0.2);
+    --vb-font: "Cascadia Mono", "Consolas", "JetBrains Mono", "Microsoft YaHei UI", monospace;
+    --vb-ok: #39ff88;
+    --vb-pending: #ffb000;
+    --vb-bad: #ff5050;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--vb-bg);
+    color: var(--vb-ink);
+    font-family: var(--vb-font);
+    -webkit-font-smoothing: antialiased;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    padding: max(20px, env(safe-area-inset-top)) 18px max(20px, env(safe-area-inset-bottom));
+  }
+  .wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 480px;
+    width: 100%;
+    margin: 0 auto;
+  }
+  .room-tag {
+    text-align: center;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: var(--vb-ink);
+    background: var(--vb-surface);
+    border: var(--vb-border-w) solid var(--vb-border);
+    /* 票数条同款胶囊圆角：不管主题本身是方角还是圆角，投票相关的条 / 按钮 /
+       提示都统一用 999px，呼应主计时页 .vrb-track 的票数条形状 */
+    border-radius: 999px;
+    padding: 4px 14px;
+    align-self: center;
+    font-family: "JetBrains Mono", monospace;
+  }
+  .status {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--vb-muted);
+  }
+  .status-ok { color: var(--vb-ok); }
+  .status-pending { color: var(--vb-pending); }
+  .status-bad { color: var(--vb-bad); }
+  .current {
+    text-align: center;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--vb-ink);
+    min-height: 1.4em;
+  }
+  .buttons {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-top: 8px;
+  }
+  .side-btn {
+    flex: 1;
+    min-height: 140px;
+    border-radius: var(--vb-radius, 2px);
+    border: var(--vb-border-w) solid var(--vb-border);
+    box-shadow: var(--vb-shadow);
+    font-size: 34px;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    color: var(--vb-btn-ink);
+    font-family: var(--vb-font);
+    transition: transform 0.08s ease, box-shadow 0.08s ease, opacity 0.12s ease, background 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .side-btn:active { transform: scale(0.98); }
+  .side-btn:disabled { opacity: 0.4; cursor: default; transform: none; }
+  .side-pro { background: var(--vb-pro); }
+  .side-con { background: var(--vb-con); }
+  .side-btn.active { box-shadow: var(--vb-shadow), inset 0 0 0 4px var(--vb-ink); }
+  .closed-banner {
+    text-align: center;
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--vb-ink);
+    padding: 10px;
+    border: var(--vb-border-w) solid var(--vb-border);
+    border-radius: var(--vb-radius, 2px);
+    background: var(--vb-surface);
+    box-shadow: var(--vb-shadow-sm);
+  }
+  .error {
+    text-align: center;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--vb-ink);
+    line-height: 1.6;
+    margin: auto 0;
+    padding: 14px 22px;
+    border: var(--vb-border-w) solid var(--vb-border);
+    border-radius: var(--vb-radius, 2px);
+    background: var(--vb-surface);
+  }
+  .footer-hint {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--vb-muted);
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="room-tag" id="roomTag"></div>
+    <div class="status" id="statusLine">连接中…</div>
+    <div class="current" id="currentLine"></div>
+    <div class="buttons" id="buttonsWrap">
+      <button class="side-btn side-pro" id="btnPro" type="button">正方</button>
+      <button class="side-btn side-con" id="btnCon" type="button">反方</button>
+    </div>
+    <div class="closed-banner" id="closedBanner" hidden>投票已结束</div>
+    <div class="error" id="errorBox" hidden></div>
+    <div class="footer-hint" id="footerHint">可随时改票，以最后一次为准</div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    var statusEl = document.getElementById('statusLine');
+    var currentEl = document.getElementById('currentLine');
+    var roomTagEl = document.getElementById('roomTag');
+    var btnPro = document.getElementById('btnPro');
+    var btnCon = document.getElementById('btnCon');
+    var closedBanner = document.getElementById('closedBanner');
+    var errorBox = document.getElementById('errorBox');
+    var buttonsWrap = document.getElementById('buttonsWrap');
+    var footerHint = document.getElementById('footerHint');
+
+    function showFatal(msg) {
+      errorBox.textContent = msg;
+      errorBox.hidden = false;
+      statusEl.hidden = true;
+      currentEl.hidden = true;
+      buttonsWrap.hidden = true;
+      footerHint.hidden = true;
+    }
+
+    var params = new URLSearchParams(location.search);
+    var room = (params.get('room') || '').trim().toUpperCase();
+    if (!room) {
+      showFatal('缺少房间码，请使用主持人提供的二维码或投票链接重新进入。');
+      return;
+    }
+    roomTagEl.textContent = '房间 ' + room;
+
+    var cfg = window.DEBATE_VOTE_CONFIG || {};
+    if (!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY) {
+      showFatal('投票功能还没有配置，请联系主持人。');
+      return;
+    }
+    if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+      showFatal('投票服务加载失败，请检查网络后刷新页面重试。');
+      return;
+    }
+
+    function uuid() {
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        var r = (Math.random() * 16) | 0;
+        var v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      });
+    }
+
+    var VOTER_KEY = 'debate-timer-v2-vote-voter-id';
+    var voterId = null;
+    try { voterId = localStorage.getItem(VOTER_KEY); } catch (e) {}
+    if (!voterId) {
+      voterId = uuid();
+      try { localStorage.setItem(VOTER_KEY, voterId); } catch (e) {}
+    }
+
+    var SIDES_KEY = 'debate-timer-v2-vote-sides';
+    function loadSides() {
+      try { return JSON.parse(localStorage.getItem(SIDES_KEY) || '{}') || {}; } catch (e) { return {}; }
+    }
+    function saveSide(side) {
+      var sides = loadSides();
+      sides[room] = side;
+      try { localStorage.setItem(SIDES_KEY, JSON.stringify(sides)); } catch (e) {}
+    }
+
+    var mySide = loadSides()[room] || null;
+    var votingClosed = false;
+
+    var THEMES = ['neo', 'arena', 'academy', 'soft', 'broadcast', 'terminal'];
+    function applyTheme(theme) {
+      document.body.dataset.theme = (THEMES.indexOf(theme) >= 0) ? theme : 'neo';
+    }
+    applyTheme('neo'); // 默认 Neo-Brutalism，收到主持端第一次 sync/open/closed 后会切成真实主题
+
+    function renderCurrent() {
+      if (mySide === 'pro') currentEl.textContent = '你当前投给：正方';
+      else if (mySide === 'con') currentEl.textContent = '你当前投给：反方';
+      else currentEl.textContent = '还没有投票，点一下下面的按钮';
+      btnPro.classList.toggle('active', mySide === 'pro');
+      btnCon.classList.toggle('active', mySide === 'con');
+    }
+    renderCurrent();
+
+    function setStatus(text, kind) {
+      statusEl.textContent = text;
+      statusEl.className = 'status' + (kind ? ' status-' + kind : '');
+    }
+
+    function applyClosed(closed) {
+      votingClosed = closed;
+      closedBanner.hidden = !closed;
+      btnPro.disabled = closed;
+      btnCon.disabled = closed;
+    }
+
+    var client = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+    var BACKOFF_MAX = 15000;
+    var destroyed = false;
+
+    /* 投票频道 room-<room>：只用来发票，从不订阅（不建立 Realtime 订阅），
+     * 用 httpSend()（新版 supabase-js 走纯 REST 广播）或者在未订阅状态下调用
+     * send()（会自动走同一个 REST 广播接口）。这样观众之间互不可见对方的票，
+     * 也不会把票广播给所有在线观众，人多时省消息配额。 */
+    var voteChannel = client.channel('room-' + room);
+
+    /* 控制频道 room-<room>-ctl：观众唯一真正订阅的频道，只收主持端的
+     * open / closed / sync。 */
+    var ctlChannel = null;
+    var ctlBackoff = 1000;
+    var ctlReconnectTimer = null;
+
+    var voteRetryTimer = null;
+    var voteRetryBackoff = 1000;
+
+    function sendBroadcast(ch, payload) {
+      if (!ch) return Promise.resolve('error');
+      try {
+        if (typeof ch.httpSend === 'function') {
+          return ch.httpSend('msg', payload).then(
+            function (res) { return (res && res.success) ? 'ok' : 'error'; },
+            function () { return 'error'; }
+          );
+        }
+        return Promise.resolve(ch.send({ type: 'broadcast', event: 'msg', payload: payload }));
+      } catch (e) {
+        return Promise.resolve('error');
+      }
+    }
+
+    function sendVote() {
+      if (!mySide) return;
+      if (voteRetryTimer) { clearTimeout(voteRetryTimer); voteRetryTimer = null; }
+      var payload = { type: 'vote', voter_id: voterId, side: mySide, ts: Date.now() };
+      sendBroadcast(voteChannel, payload).then(function (status) {
+        if (status === 'ok') { voteRetryBackoff = 1000; return; }
+        scheduleVoteRetry();
+      });
+    }
+
+    function scheduleVoteRetry() {
+      if (voteRetryTimer || destroyed) return;
+      voteRetryTimer = setTimeout(function () {
+        voteRetryTimer = null;
+        voteRetryBackoff = Math.min(voteRetryBackoff * 2, BACKOFF_MAX);
+        sendVote();
+      }, voteRetryBackoff);
+    }
+
+    function handlePayload(payload) {
+      if (!payload || typeof payload !== 'object') return;
+      if (payload.theme) applyTheme(payload.theme);
+      if (payload.type === 'sync') sendVote();
+      else if (payload.type === 'closed') applyClosed(true);
+      else if (payload.type === 'open') applyClosed(false);
+    }
+
+    function scheduleCtlReconnect() {
+      if (ctlReconnectTimer || destroyed) return;
+      ctlReconnectTimer = setTimeout(function () {
+        ctlReconnectTimer = null;
+        ctlBackoff = Math.min(ctlBackoff * 2, BACKOFF_MAX);
+        connectCtl();
+      }, ctlBackoff);
+    }
+
+    function connectCtl() {
+      if (destroyed) return;
+      if (ctlChannel) {
+        try { client.removeChannel(ctlChannel); } catch (e) {}
+        ctlChannel = null;
+      }
+      setStatus('连接中…', 'pending');
+      var ch = client.channel('room-' + room + '-ctl');
+      ch.on('broadcast', { event: 'msg' }, function (msg) { handlePayload(msg && msg.payload); });
+      ch.subscribe(function (status) {
+        if (destroyed) return;
+        if (status === 'SUBSCRIBED') {
+          ctlChannel = ch;
+          ctlBackoff = 1000;
+          setStatus('已连接', 'ok');
+          // 刚连上（包括重连）：重发一次自己当前的票，不用等主持端的 sync
+          sendVote();
+          // 主持端可能早就开着房间了（晚进来的观众错过了它连上时广播的那一次
+          // open/closed + sync + theme），主动要一次，这样主题和开关状态不会
+          // 要等到主持端下一次操作才同步过来
+          sendBroadcast(ctlChannel, { type: 'hello' });
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          if (ctlChannel === ch) ctlChannel = null;
+          setStatus('连接中断，重试中…', 'bad');
+          scheduleCtlReconnect();
+        }
+      });
+    }
+
+    function chooseSide(side) {
+      if (votingClosed) return;
+      mySide = side;
+      saveSide(side);
+      renderCurrent();
+      sendVote();
+    }
+
+    btnPro.addEventListener('click', function () { chooseSide('pro'); });
+    btnCon.addEventListener('click', function () { chooseSide('con'); });
+
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible' && !destroyed && !ctlChannel) {
+        if (ctlReconnectTimer) { clearTimeout(ctlReconnectTimer); ctlReconnectTimer = null; }
+        ctlBackoff = 1000;
+        connectCtl();
+      }
+    });
+    window.addEventListener('beforeunload', function () { destroyed = true; });
+
+    // 仅供 e2e 测试读取频道订阅状态：验证投票频道从不订阅、控制频道才订阅
+    window.__voteChannelsForTest = { get vote() { return voteChannel; }, get ctl() { return ctlChannel; } };
+
+    connectCtl();
+  })();
+  </script>
+</body>
+</html>

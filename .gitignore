@@ -4,3 +4,6 @@ Thumbs.db
 __sizetest.txt
 *.log
 design-previews/
+config.js
+.vercel
+.env*

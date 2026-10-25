@@ -8,6 +8,14 @@
     --tweak-质询: 90;
     --tweak-对辩: 120;
     /*EDITMODE-END*/
+    --vote-bar-reserve: 0px;
+  }
+
+  /* 票数条显示时，双计时的高度公式（下面 .duel 规则）要让出这部分空间，
+     单计时页也要把 main 顶部内边距让出同样的量，否则矮屏幕 / 宽屏下数字区域
+     会被挤到和票数条重叠（票数条实测高度 + 下间距约 50～55px，留一点余量）。 */
+  body:has(.vote-ratio-bar:not([hidden])) {
+    --vote-bar-reserve: 64px;
   }
 
   /* Warm theme (default) */
@@ -1320,6 +1328,12 @@ main {
   min-width: 0;
 }
 
+/* 票数条显示时，它基本占满原来 main 顶部内边距留出的空当，所以把顶部内边距
+   让出来给它，而不是在原有内边距之外再加高度——避免把计时内容往下挤出可用区域 */
+body:has(.vote-ratio-bar:not([hidden])) main {
+  padding-top: max(0px, clamp(18px, 4vw, 48px) - var(--vote-bar-reserve, 0px)) !important;
+}
+
 .stage,
 .single-timer {
   min-height: 0;
@@ -1331,6 +1345,42 @@ main {
   justify-content: center !important;
   gap: clamp(14px, 2.2vh, 26px) !important;
   padding: 0 !important;
+}
+
+/* 票数条显示时，单计时的数字本身不缩（保持和不开投票时一样大），只收紧
+   辩题、票数条、环节名和进度条周围的纵向留白，把票数条占掉的高度让出来 */
+body:has(.vote-ratio-bar:not([hidden])) .brand-topic {
+  font-size: clamp(16px, 1.6vw, 20px) !important;
+  line-height: 1.1 !important;
+  padding-block: 2px !important;
+}
+body:has(.vote-ratio-bar:not([hidden])) .vote-ratio-bar {
+  margin-bottom: clamp(2px, 0.6vh, 6px) !important;
+  padding-block: clamp(4px, 0.8vh, 8px) !important;
+}
+body:has(.vote-ratio-bar:not([hidden])) .stage-single .single-timer {
+  gap: clamp(2px, 0.8vh, 10px) !important;
+}
+body:has(.vote-ratio-bar:not([hidden])) .stage-single .single-label {
+  font-size: clamp(16px, 2.2vw, 30px) !important;
+  line-height: 1 !important;
+}
+body:has(.vote-ratio-bar:not([hidden])) .stage-single .timer-actions {
+  margin-top: clamp(0px, 0.4vh, 6px) !important;
+}
+body:has(.vote-ratio-bar:not([hidden])) .stage-single .progress-wrap {
+  gap: clamp(2px, 0.6vh, 8px) !important;
+}
+body:has(.vote-ratio-bar:not([hidden])) .stage-single .progress-meta {
+  font-size: 11px !important;
+}
+body:has(.vote-ratio-bar:not([hidden])) .stage-duel .duel {
+  height: 100% !important;
+  min-height: 0 !important;
+}
+body:has(.vote-ratio-bar:not([hidden])) .stage-duel .duel-panel {
+  padding-block: clamp(12px, 2.2vh, 32px) !important;
+  gap: clamp(6px, 1.4vh, 16px) !important;
 }
 
 .single-label {
@@ -1494,7 +1544,7 @@ footer {
   flex: 0 1 auto !important;
   min-height: 0;
   width: min(100%, 1760px) !important;
-  height: min(680px, 70vh, calc(100vh - 190px)) !important;
+  height: min(680px, calc(70vh - var(--vote-bar-reserve)), calc(100vh - 190px - var(--vote-bar-reserve))) !important;
   margin: auto !important;
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -2111,12 +2161,13 @@ body[data-screen="cover"] #btnNext {
   font-family: Inter, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
   font-size: clamp(54px, 5.7vw, 104px);
   font-weight: 780;
-  line-height: 1.08;
+  line-height: 1.25;
   letter-spacing: 0;
   padding: 0 12px 8px;
   text-wrap: balance;
+  line-break: strict;
+  overflow-wrap: anywhere;
 }
-
 .cover-title-rule {
   width: clamp(64px, 7vw, 120px);
   height: 4px;
@@ -2379,7 +2430,8 @@ body[data-theme="arena"],
 body[data-theme="academy"],
 body[data-theme="soft"],
 body[data-theme="broadcast"],
-body[data-theme="terminal"] {
+body[data-theme="terminal"],
+body[data-theme="neo"] {
   --bg: var(--vf-paper);
   --bg-2: var(--vf-paper-soft);
   --bg-3: var(--vf-track);
@@ -2401,6 +2453,7 @@ body[data-theme="terminal"] {
 .chip[data-theme="soft"] { background: #eef0ff !important; color: #5468ff !important; border-color: #c9cffc !important; }
 .chip[data-theme="broadcast"] { background: linear-gradient(105deg, #1f5fe0 50%, #e23a2e 50%) !important; color: #fff !important; border-color: #ffd400 !important; }
 .chip[data-theme="terminal"] { background: #050a06 !important; color: #39ff88 !important; border-color: #1c5c34 !important; font-family: Consolas, monospace !important; }
+.chip[data-theme="neo"] { background: #ffe600 !important; color: #000 !important; border: 2px solid #000 !important; font-weight: 800 !important; }
 
 /* 1 · 赛场之夜 Arena — 深色赛事记分牌：深蓝夜色底，正方蓝 / 反方橙，数字发光 */
 html body[data-theme="arena"] {
@@ -2753,7 +2806,7 @@ html body[data-theme="academy"] .cover-page {
 html body[data-theme="academy"] .stage-cover { padding: 8px 20px 28px; }
 /* 辩题按内容定高：只有一行时不再空出第二行，标题和装饰线挨得紧凑 */
 @supports (field-sizing: content) {
-  html body[data-theme="academy"] .cover-topic-input { field-sizing: content; height: auto; min-height: 0 !important; max-height: 2.3em; }
+  html body[data-theme="academy"] .cover-topic-input { field-sizing: content; height: auto; min-height: 0 !important; max-height: calc(var(--cover-topic-lines, 2) * 1.25em); }
 }
 /* 比赛名上方三枚小菱形，和底栏的环节菱形呼应 */
 html body[data-theme="academy"] .cover-kicker::before {
@@ -3337,15 +3390,282 @@ html body[data-theme="terminal"] .brand-mark { width: 210px !important; }
 html body[data-theme="terminal"] .brand-mark::before { white-space: nowrap !important; }
 html body[data-theme="terminal"] .brand-mark::after { top: 26px !important; white-space: nowrap !important; }
 
+/* 6 · 新野兽派 Neo-Brutalism — 奶白卡片 + 全黑粗边框 + 无虚化硬投影，正方电光蓝 / 反方亮粉，黄色点缀，字重拉满 */
+html body[data-theme="neo"] {
+  --vf-paper: #fffdf4;
+  --vf-paper-soft: #fff1a6;
+  --vf-ink: #0a0a0a;
+  --vf-muted: #333333;
+  --vf-faint: #6e6e6e;
+  --vf-line: #000000;
+  --vf-track: #e7e2d2;
+  --vf-warn: #ff1f4d;
+  --lk-pro: #0040ff;
+  --lk-con: #ff2d78;
+  --lk-hi: #ffe600;
+  --lk-shadow: 3px 3px 0 #000;
+  --lk-shadow-lg: 8px 8px 0 #000;
+  --lk-num: "Arial Black", "Helvetica Neue", "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", sans-serif;
+  --lk-ui: "Helvetica Neue", Arial, "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", sans-serif;
+}
 
-/* 主题有五个：标签单独一行，色卡自动换行，文字不折断 */
+html body[data-theme="neo"] { background: var(--lk-hi) !important; font-family: var(--lk-ui) !important; }
+html body[data-theme="neo"] .app {
+  border: 4px solid #000 !important;
+  border-radius: 2px !important;
+  background: var(--vf-paper) !important;
+  box-shadow: var(--lk-shadow-lg) !important;
+}
+
+/* brand：粗黑字 + 黄底色块 */
+html body[data-theme="neo"] .brand-mark::before, html body[data-theme="neo"] .brand-mark::after {
+  font-family: var(--lk-num) !important;
+  font-weight: 900 !important;
+  color: var(--vf-ink) !important;
+}
+html body[data-theme="neo"] .brand-mark::after {
+  background: var(--lk-hi) !important;
+  color: #000 !important;
+  border: 2px solid #000 !important;
+  padding: 1px 6px !important;
+  left: 0 !important;
+}
+html body[data-theme="neo"] .brand::before, html body[data-theme="neo"] .brand::after { background: #000 !important; }
+html body[data-theme="neo"] .brand-topic { color: var(--vf-muted) !important; font-weight: 700 !important; }
+
+/* 环节导航：方块色卡标出当前环节 */
+html body[data-theme="neo"] .mode-tabs { column-gap: 8px !important; }
+html body[data-theme="neo"] .mode-tab {
+  border: 2px solid #000 !important;
+  border-radius: 2px !important;
+  padding: 6px 14px !important;
+  background: #fff !important;
+  color: var(--vf-ink) !important;
+  font-weight: 700 !important;
+}
+html body[data-theme="neo"] .mode-tab:hover { background: var(--vf-paper-soft) !important; }
+html body[data-theme="neo"] .mode-tab.active {
+  background: var(--lk-pro) !important;
+  color: #fff !important;
+  font-weight: 800 !important;
+}
+html body[data-theme="neo"] .icon-btn { color: var(--vf-ink) !important; }
+
+/* 单计时 */
+html body[data-theme="neo"] .single-label {
+  display: inline-block;
+  background: var(--lk-hi) !important;
+  color: #000 !important;
+  border: 2px solid #000 !important;
+  font-weight: 800 !important;
+  font-size: clamp(16px, 1.8vw, 24px) !important;
+  padding: 3px 16px;
+  align-self: center;
+}
+html body[data-theme="neo"] .single-time {
+  font-family: var(--lk-num) !important;
+  font-weight: 900 !important;
+  color: var(--vf-ink) !important;
+  border: 0 !important;
+}
+html body[data-theme="neo"] .progress-meta { color: var(--vf-muted) !important; font-weight: 700 !important; }
+html body[data-theme="neo"] .progress-bar, html body[data-theme="neo"] .duel-progress {
+  height: 10px !important;
+  border-radius: 0 !important;
+  background: var(--vf-track) !important;
+  border: 2px solid #000 !important;
+}
+html body[data-theme="neo"] .progress-fill { background: var(--lk-pro) !important; }
+
+/* 按钮：粗边框 + 硬投影，按下时贴到投影底 */
+html body[data-theme="neo"] .btn, html body[data-theme="neo"] .timer-action-btn {
+  border: 2px solid #000 !important;
+  border-radius: 2px !important;
+  padding: 8px 18px !important;
+  color: var(--vf-ink) !important;
+  background: #fff !important;
+  font-weight: 700 !important;
+  box-shadow: var(--lk-shadow) !important;
+  transition: transform 0.08s ease, box-shadow 0.08s ease !important;
+}
+html body[data-theme="neo"] .btn:hover, html body[data-theme="neo"] .timer-action-btn:hover { background: var(--vf-paper-soft) !important; }
+html body[data-theme="neo"] .btn:active, html body[data-theme="neo"] .timer-action-btn:active {
+  transform: translate(3px, 3px) !important;
+  box-shadow: 0 0 0 #000 !important;
+}
+html body[data-theme="neo"] .btn-primary {
+  background: var(--lk-pro) !important;
+  color: #fff !important;
+  min-width: 110px !important;
+}
+html body[data-theme="neo"] .btn-primary:hover { background: #1a54ff !important; color: #fff !important; }
+
+/* 环节进度：黑边方块 */
+html body[data-theme="neo"] .flow-label { color: var(--vf-muted) !important; font-weight: 700 !important; }
+html body[data-theme="neo"] .flow-dot { width: 10px !important; height: 10px !important; border-radius: 0 !important; background: #fff !important; border: 1.5px solid #000 !important; }
+html body[data-theme="neo"] .flow-dot.done { background: var(--vf-faint) !important; }
+html body[data-theme="neo"] .flow-dot.current { background: var(--lk-hi) !important; }
+
+/* 双计时：粗边框卡片，当前发言方用本方颜色描边（内嵌描边，不外溢，避免和相邻面板重叠） */
+html body[data-theme="neo"] .duel { border: 0 !important; gap: 14px !important; }
+html body[data-theme="neo"] .duel-panel {
+  border: 2px solid #000 !important;
+  border-radius: 2px !important;
+  background: #fff !important;
+}
+html body[data-theme="neo"] .duel-panel[data-side="pro"] { border-right: 2px solid #000 !important; }
+html body[data-theme="neo"] .duel-panel.active[data-side="pro"] { background: #eaf0ff !important; box-shadow: inset 0 0 0 4px var(--lk-pro) !important; }
+html body[data-theme="neo"] .duel-panel.active[data-side="con"] { background: #ffeaf2 !important; box-shadow: inset 0 0 0 4px var(--lk-con) !important; }
+html body[data-theme="neo"] .duel-panel.inactive { opacity: 0.55 !important; }
+html body[data-theme="neo"] .duel-side-label { font-weight: 800 !important; letter-spacing: 0.08em !important; }
+html body[data-theme="neo"] .duel-panel[data-side="pro"] .duel-side-label, html body[data-theme="neo"] .duel-panel[data-side="pro"] .duel-side-name { color: var(--lk-pro) !important; }
+html body[data-theme="neo"] .duel-panel[data-side="con"] .duel-side-label, html body[data-theme="neo"] .duel-panel[data-side="con"] .duel-side-name { color: var(--lk-con) !important; }
+html body[data-theme="neo"] .duel-side-name { font-weight: 900 !important; }
+html body[data-theme="neo"] .duel-time { font-family: var(--lk-num) !important; font-weight: 900 !important; color: var(--vf-ink) !important; }
+html body[data-theme="neo"] .duel-panel[data-side="pro"] .duel-progress-fill { background: var(--lk-pro) !important; }
+html body[data-theme="neo"] .duel-panel[data-side="con"] .duel-progress-fill { background: var(--lk-con) !important; }
+html body[data-theme="neo"] .duel-reset-btn { color: var(--vf-muted) !important; font-weight: 700 !important; }
+html body[data-theme="neo"] .duel-divider {
+  width: 60px !important; height: 60px !important;
+  border-radius: 2px !important;
+  background: var(--lk-hi) !important;
+  border: 3px solid #000 !important;
+  color: #000 !important;
+  font-weight: 900 !important;
+  font-size: 13px !important;
+  box-shadow: var(--lk-shadow) !important;
+}
+html body[data-theme="neo"] .duel-divider:hover { background: #fff !important; }
+
+/* 首页 */
+html body[data-theme="neo"] .cover-page {
+  --cover-bg: var(--vf-paper);
+  --cover-fg: var(--vf-ink);
+  --cover-pro: var(--lk-pro);
+  --cover-con: var(--lk-con);
+  border: 4px solid #000;
+  border-radius: 2px !important;
+  box-shadow: var(--lk-shadow-lg) !important;
+}
+html body[data-theme="neo"] .cover-match-input { font-family: var(--lk-num) !important; font-weight: 800 !important; color: var(--vf-muted) !important; }
+html body[data-theme="neo"] .cover-topic-input { font-family: var(--lk-ui) !important; font-weight: 900 !important; }
+html body[data-theme="neo"] .cover-title-rule { height: 6px !important; border-radius: 0 !important; background: var(--lk-hi) !important; border: 2px solid #000; }
+html body[data-theme="neo"] .cover-team-tag { border: 2px solid currentColor !important; border-radius: 2px !important; font-weight: 800 !important; }
+html body[data-theme="neo"] .cover-team-pro .cover-team-tag { background: #eaf0ff; }
+html body[data-theme="neo"] .cover-team-con .cover-team-tag { background: #ffeaf2; }
+html body[data-theme="neo"] .cover-vs {
+  width: 48px; height: 48px; border-radius: 2px;
+  display: grid; place-items: center;
+  background: #fff; color: #000 !important;
+  border: 3px solid #000;
+  font-weight: 900 !important;
+}
+
+/* 首页卡片随可用高度收缩，底边不再被裁掉；外框投影不被 .stage-cover 裁掉 */
+html body[data-theme="neo"] .cover-page { min-height: 0 !important; height: 100% !important; }
+html body[data-theme="neo"] .stage-cover { padding: 10px 18px 24px; }
+
+/* 设置抽屉 / 投票面板：方角粗边框按钮，呼应整体风格 */
+html body[data-theme="neo"] .drawer { border-left: 3px solid #000 !important; }
+html body[data-theme="neo"] .drawer .chip {
+  border: 1.5px solid #000 !important;
+  border-radius: 2px !important;
+  background: #fff !important;
+  color: var(--vf-ink) !important;
+  font-weight: 600 !important;
+}
+html body[data-theme="neo"] .drawer .chip.active {
+  background: var(--lk-hi) !important;
+  border-width: 2px !important;
+  box-shadow: var(--lk-shadow) !important;
+  font-weight: 800 !important;
+}
+html body[data-theme="neo"] .drawer .chip-group { background: var(--vf-paper-soft) !important; border-radius: 2px !important; }
+html body[data-theme="neo"] .drawer .preset-new-btn {
+  border: 2px solid #000 !important;
+  border-radius: 2px !important;
+  background: var(--lk-hi) !important;
+  color: #000 !important;
+  font-weight: 800 !important;
+  box-shadow: var(--lk-shadow) !important;
+}
+html body[data-theme="neo"] .drawer .input,
+html body[data-theme="neo"] .drawer .stage-row,
+html body[data-theme="neo"] .drawer .preset-item,
+html body[data-theme="neo"] .drawer .background-preview { border-radius: 2px !important; border: 1.5px solid #000 !important; }
+
+/* 票数条 + 投票结果：黑边 + 硬投影，正方蓝 / 反方粉一眼分清 */
+html body[data-theme="neo"] .vote-ratio-bar {
+  border: 3px solid #000 !important;
+  border-radius: 2px !important;
+  background: #fff !important;
+  box-shadow: var(--lk-shadow) !important;
+  font-weight: 700 !important;
+}
+html body[data-theme="neo"] .vrb-count { font-weight: 900 !important; }
+html body[data-theme="neo"] .vrb-pro { color: var(--lk-pro) !important; }
+html body[data-theme="neo"] .vrb-con { color: var(--lk-con) !important; }
+html body[data-theme="neo"] .vrb-track {
+  border: 2px solid #000 !important;
+  border-radius: 999px !important;
+  background: #fff !important;
+}
+html body[data-theme="neo"] .vrb-fill-pro { background: var(--lk-pro) !important; }
+html body[data-theme="neo"] .vrb-fill-con { background: var(--lk-con) !important; }
+html body[data-theme="neo"] .vote-qr-wrap { border: 2px solid #000 !important; border-radius: 2px !important; }
+html body[data-theme="neo"] .vote-result-cell {
+  border: 2px solid #000 !important;
+  border-radius: 2px !important;
+  background: #fff !important;
+  box-shadow: var(--lk-shadow) !important;
+}
+html body[data-theme="neo"] .vote-result-cell:nth-child(1) { box-shadow: var(--lk-shadow), inset 4px 0 0 var(--lk-pro) !important; }
+html body[data-theme="neo"] .vote-result-cell:nth-child(2) { box-shadow: var(--lk-shadow), inset 4px 0 0 var(--lk-con) !important; }
+html body[data-theme="neo"] .vote-result-cell .vrc-value { font-weight: 900 !important; }
+
+/* 二维码全屏：黄底黑边，呼应整体 Neo-Brutalism 风格 */
+html body[data-theme="neo"] .vote-qr-fullscreen { background: var(--vf-paper) !important; }
+html body[data-theme="neo"] .vqf-room {
+  background: var(--lk-hi) !important;
+  color: #000 !important;
+  border: 3px solid #000 !important;
+  border-radius: 2px !important;
+  padding: 6px 22px !important;
+  font-weight: 900 !important;
+}
+html body[data-theme="neo"] .vqf-qr {
+  border: 4px solid #000 !important;
+  border-radius: 2px !important;
+  box-shadow: var(--lk-shadow-lg) !important;
+}
+html body[data-theme="neo"] .vqf-url { font-weight: 700 !important; }
+
+/* 主题有六个：标签单独一行，色卡自动换行，文字不折断 */
 .field-row:has(#themeGroup) { flex-direction: column !important; align-items: flex-start !important; gap: 10px !important; }
 #themeGroup { flex-wrap: wrap !important; gap: 8px !important; }
 #themeGroup .chip { white-space: nowrap !important; padding: 6px 12px !important; }
 
-/* 首页卡片：大屏时撑满可用高度；窄屏内容放不下时卡片随内容变高，首页可滚动，不再裁掉学校名 */
-html body[data-theme] .cover-page { height: auto !important; min-height: 100% !important; }
+/* 首页卡片：大屏时撑满可用高度；窄屏内容放不下时卡片随内容变高，首页可滚动，不再裁掉学校名。
+   .cover-page 是 .stage-cover（flex 列）的子项，默认 flex-shrink:1 会在内容比可用高度还高时
+   把卡片压扁，压出辩题顶上那半截诡异的负边距；锁 flex-shrink:0 让它按内容撑开，超出部分交给
+   .stage-cover 的 overflow-y:auto 滚动，而不是被挤扁。 */
+html body[data-theme] .cover-page { height: auto !important; min-height: 100% !important; flex-shrink: 0 !important; }
 html body .stage-cover { overflow-y: auto !important; }
+
+/* 大屏首页：卡片用满舞台宽度，辩题输入框吃满卡片内宽——长中文辩题少换几行；
+   纵向内边距和间距略收，尽量让 3–4 行标题和对阵区落在一屏内。内容变多时卡片
+   继续按内容增高，最终仍由上面的 .stage-cover 滚动兜底。 */
+@media (min-width: 1181px) {
+  html body[data-theme] .cover-page {
+    width: min(100%, 1680px) !important;
+    max-width: min(100%, 1680px) !important;
+    padding: clamp(16px, 2.4vh, 34px) clamp(40px, 5vw, 84px) !important;
+    gap: clamp(12px, 2.4vh, 32px) !important;
+  }
+  html body[data-theme] .cover-head { gap: clamp(8px, 1.6vh, 20px) !important; }
+  html body[data-theme] .cover-topic-input { width: 100% !important; }
+  html body[data-theme] .cover-team { gap: clamp(8px, 1.2vh, 16px) !important; }
+}
 
 /* 双计时左右并排时只有一行：基础样式里的 1fr 1fr 是旧的上下布局，宽屏上会多出一条空行，
    让面板撑不满（学院典雅的上下框线会露出来） */
@@ -3519,7 +3839,8 @@ html body[data-theme] .mode-more[aria-expanded="true"] { background: var(--vf-pa
   transition-delay: 0s;
 }
 html body[data-theme="broadcast"] .stage-panel,
-html body[data-theme="terminal"] .stage-panel { border-radius: 0; }
+html body[data-theme="terminal"] .stage-panel,
+html body[data-theme="neo"] .stage-panel { border-radius: 0; }
 .stage-panel-title {
   margin: 0 4px 10px;
   color: var(--vf-muted);
@@ -3560,6 +3881,7 @@ html body[data-theme="arena"],
 html body[data-theme="broadcast"] { --time-em: 2.6; }
 html body[data-theme="academy"] { --time-em: 2.8; }
 html body[data-theme="soft"] { --time-em: 2.75; }
+html body[data-theme="neo"] { --time-em: 3.3; }
 
 /* 手机浏览器的 100vh 把地址栏也算进去，底栏按钮会被挡住 */
 @supports (height: 100dvh) {
@@ -3647,7 +3969,7 @@ html body[data-theme] .header-actions { flex-shrink: 0; }
   /* 首页：辩题按内容定高，留白随屏高收缩；队名占满整行，宽度不随字号变 */
   html body[data-theme] .cover-page { gap: clamp(12px, 3.2vh, 36px) !important; padding-block: clamp(10px, 3vh, 42px) !important; }
   html body[data-theme] .cover-head { gap: clamp(8px, 2.2vh, 20px) !important; }
-  html body[data-theme] .cover-topic-input { min-height: 0 !important; height: 2.3em; }
+  html body[data-theme] .cover-topic-input { min-height: 0 !important; height: calc(var(--cover-topic-lines, 2) * 1.25em); }
   html body[data-theme] .cover-matchup { gap: 10px !important; }
   html body[data-theme] .cover-team { width: 100%; }
   html body[data-theme="soft"] .cover-team { padding: 12px 14px !important; }
@@ -3835,7 +4157,7 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
   html body[data-theme] .cover-topic-input {
     font-size: clamp(24px, 11vh, 46px) !important;
     min-height: 0 !important;
-    height: 2.3em;
+    height: calc(var(--cover-topic-lines, 2) * 1.25em);
     padding-block: 0 4px !important;
   }
   html body[data-theme] .cover-title-rule { margin-top: 0 !important; }
@@ -3860,9 +4182,389 @@ html body[data-theme] .controls .btn { white-space: nowrap; }
 /* 辩题输入框跟着内容长高（一行就一行），不支持的浏览器用上面的固定两行高 */
 @supports (field-sizing: content) {
   @media (max-width: 760px) {
-    html body[data-theme] .cover-topic-input { field-sizing: content; height: auto; max-height: 3.4em; }
+    html body[data-theme] .cover-topic-input { field-sizing: content; height: auto; max-height: calc(var(--cover-topic-lines, 3) * 1.25em); }
   }
   @media (max-height: 520px), (max-height: 700px) and (max-width: 1100px) and (orientation: landscape) {
-    html body[data-theme] .cover-topic-input { field-sizing: content; height: auto; max-height: 2.3em; }
+    html body[data-theme] .cover-topic-input { field-sizing: content; height: auto; max-height: calc(var(--cover-topic-lines, 2) * 1.25em); }
   }
+}
+
+/* ========== 现场投票 ========== */
+/* 票数条：插在 main 里，紧跟在辩题下方、计时数字上方的空白处，跟着正常排版流走，
+   不用 fixed，不会盖住任何数字 / 标签 / 进度条 / 按钮。字号比旧版的底部小胶囊大得多，
+   投影到大屏上也能看清。 */
+.vote-ratio-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 2vw, 20px);
+  width: 100%;
+  max-width: min(760px, 92%);
+  margin: 0 auto clamp(8px, 1.6vh, 16px);
+  padding: clamp(6px, 1vh, 10px) clamp(14px, 2.4vw, 22px);
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--ink-2);
+  font-family: "JetBrains Mono", monospace;
+}
+.vote-ratio-bar[hidden] { display: none; }
+body[data-screen="cover"] .vote-ratio-bar { display: none !important; }
+.vrb-count {
+  flex: 0 0 auto;
+  font-weight: 800;
+  font-size: clamp(15px, 2.1vw, 25px);
+  line-height: 1.15;
+  white-space: nowrap;
+}
+.vrb-pro { color: var(--accent); }
+.vrb-con { color: var(--warn); }
+.vrb-track {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 48px;
+  height: clamp(9px, 1.5vh, 15px);
+  border-radius: 999px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.vrb-fill { height: 100%; transition: width 0.25s ease; }
+.vrb-fill-pro { background: var(--accent); }
+.vrb-fill-con { background: var(--warn); }
+
+/* 赛前 / 最终票数页：Neo-Brutalism 柱状图 */
+.stage-vote-pre,
+.stage-vote-final {
+  justify-content: stretch !important;
+  overflow: hidden !important;
+}
+.vote-page {
+  --vote-pro: var(--lk-pro, #0040ff);
+  --vote-con: var(--lk-con, #ff2d78);
+  --vote-line: var(--border-strong, var(--ink));
+  width: min(100%, 1120px);
+  height: 100%;
+  min-height: 0;
+  margin: 0 auto;
+  padding: clamp(10px, 2.4vh, 30px) clamp(12px, 4vw, 48px);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  justify-content: safe flex-start;
+  align-items: stretch;
+  gap: clamp(12px, 2.6vh, 30px);
+  color: var(--ink);
+  text-align: center;
+  overflow-y: auto;
+}
+.vote-page-head {
+  display: grid;
+  justify-items: center;
+  gap: clamp(4px, 1vh, 10px);
+}
+.vote-page-eyebrow {
+  color: var(--ink-3);
+  font-family: "JetBrains Mono", monospace;
+  font-size: clamp(10px, 1.2vw, 13px);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.vote-page-title {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--lk-ui, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif);
+  font-size: clamp(24px, 4vw, 52px);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1.05;
+}
+.vote-page-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 14px;
+  color: var(--ink-2);
+  font-family: "JetBrains Mono", monospace;
+  font-size: clamp(12px, 1.4vw, 17px);
+}
+.vote-page-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border: 1.5px solid var(--vote-line);
+  border-radius: 2px;
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.vote-page-total { font-weight: 700; }
+.vote-page-hint {
+  margin: 0;
+  color: var(--ink-3);
+  font-family: "JetBrains Mono", monospace;
+  font-size: clamp(11px, 1.2vw, 14px);
+  letter-spacing: 0.04em;
+}
+.vote-chart {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: min(100%, 880px);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(24px, 7vw, 120px);
+  align-items: stretch;
+  justify-items: center;
+}
+.vote-chart-col {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  align-items: end;
+  justify-items: center;
+  gap: clamp(4px, 1vh, 12px);
+}
+.vote-chart-count {
+  color: var(--ink);
+  font-family: var(--lk-num, "Arial Black", "Helvetica Neue", "Noto Sans SC", sans-serif);
+  font-size: clamp(40px, 7.5vw, 104px);
+  font-weight: 900;
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+.vote-chart-pro .vote-chart-count { color: var(--vote-pro); }
+.vote-chart-con .vote-chart-count { color: var(--vote-con); }
+/* 轨道本身不可见，只是给数字 + 柱子定一个底部对齐的布局区；数字跟柱子一起长高、
+   始终贴在柱顶上方 */
+.vote-chart-track {
+  --vote-bar-w: clamp(64px, 6.5vw, 128px);
+  width: var(--vote-bar-w);
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: clamp(4px, 1vh, 10px);
+}
+.vote-chart-fill {
+  width: 100%;
+  min-height: var(--vote-bar-w);
+  max-height: calc(100% - clamp(40px, 7.5vw, 104px) * 0.9 - clamp(4px, 1vh, 10px));
+  border-radius: 999px;
+  background: var(--vote-pro);
+  transition: height 0.5s ease-out;
+  flex-shrink: 0;
+}
+.vote-chart-con .vote-chart-fill { background: var(--vote-con); }
+@media (prefers-reduced-motion: reduce) {
+  .vote-chart-fill { transition: none; }
+}
+.vote-chart-stance {
+  display: -webkit-box;
+  max-width: 100%;
+  color: var(--ink);
+  font-size: clamp(13px, 1.7vw, 22px);
+  font-weight: 800;
+  line-height: 1.25;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.vote-chart-delta {
+  color: var(--ink-2);
+  font-family: "JetBrains Mono", monospace;
+  font-size: clamp(14px, 1.8vw, 24px);
+  font-weight: 800;
+  line-height: 1;
+}
+
+html body[data-theme="neo"] .vote-page-status {
+  border-width: 2px !important;
+  box-shadow: var(--lk-shadow) !important;
+}
+
+@media (max-width: 760px) {
+  .vote-page {
+    gap: clamp(8px, 2vh, 16px);
+    padding: 6px 8px 10px;
+  }
+  .vote-page-title { font-size: clamp(20px, 7vw, 32px); }
+  .vote-chart { gap: clamp(16px, 6vw, 40px); }
+  .vote-chart-count { font-size: clamp(34px, 12vw, 64px); }
+  .vote-chart-fill { max-height: calc(100% - clamp(34px, 12vw, 64px) * 0.9 - clamp(4px, 1vh, 10px)); }
+  .vote-chart-track { --vote-bar-w: clamp(58px, 15.6vw, 104px); width: var(--vote-bar-w); }
+  .vote-chart-stance { font-size: clamp(12px, 4vw, 18px); }
+}
+
+@media (max-height: 640px) {
+  .vote-page {
+    gap: clamp(6px, 1.6vh, 16px);
+    padding-block: clamp(4px, 1.4vh, 12px);
+  }
+  .vote-page-title { font-size: clamp(20px, 3.4vw, 36px); }
+  .vote-chart-count { font-size: clamp(30px, 6vw, 72px); }
+  .vote-chart-fill { max-height: calc(100% - clamp(30px, 6vw, 72px) * 0.9 - clamp(4px, 1vh, 10px)); }
+  .vote-chart-stance { font-size: clamp(12px, 1.6vw, 18px); }
+}
+
+/* 二维码全屏展示：投给全场看，盖住一切（包括设置抽屉），点哪都能退出 */
+.vote-qr-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(16px, 3vh, 32px);
+  background: var(--bg);
+  color: var(--ink);
+  cursor: pointer;
+  padding: 24px;
+}
+.vote-qr-fullscreen[hidden] { display: none; }
+.vqf-room {
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 800;
+  font-size: clamp(26px, 5vw, 56px);
+  letter-spacing: 0.1em;
+}
+.vqf-qr {
+  background: #fff;
+  padding: clamp(14px, 2vw, 28px);
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.vqf-qr svg, .vqf-qr img, .vqf-qr table {
+  width: min(62vw, 62vh);
+  height: min(62vw, 62vh);
+  display: block;
+}
+.vqf-url {
+  font-family: "JetBrains Mono", monospace;
+  font-size: clamp(14px, 2.2vw, 24px);
+  color: var(--ink-2);
+  word-break: break-all;
+  max-width: 90vw;
+  text-align: center;
+}
+.vqf-hint {
+  font-size: clamp(12px, 1.4vw, 16px);
+  color: var(--ink-3);
+}
+
+.vote-drawer .vote-room-code {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+}
+.vote-drawer .vote-qr-outer {
+  display: flex;
+  justify-content: center;
+  margin: 10px 0;
+}
+.vote-drawer .vote-qr-wrap {
+  background: #fff;
+  padding: 10px;
+  border-radius: 12px;
+  display: inline-flex;
+  min-height: 132px;
+  min-width: 132px;
+  align-items: center;
+  justify-content: center;
+}
+.vote-drawer .vote-qr-wrap svg,
+.vote-drawer .vote-qr-wrap img,
+.vote-drawer .vote-qr-wrap table { width: 120px; height: 120px; }
+.vote-drawer #voteLinkInput { flex: 1 1 auto; width: auto; }
+.vote-drawer .vote-phase,
+.vote-drawer .vote-counts {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  color: var(--ink);
+}
+.vote-drawer .preset-hint code {
+  font-family: "JetBrains Mono", monospace;
+  background: var(--bg-2);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+.vote-result-box {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 4px;
+}
+.vote-result-cell {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-2);
+  padding: 10px 12px;
+}
+.vote-result-cell .vrc-label {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-family: "JetBrains Mono", monospace;
+}
+.vote-result-cell .vrc-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--ink);
+  font-family: "JetBrains Mono", monospace;
+  margin-top: 2px;
+}
+.vote-result-cell .vrc-delta {
+  font-size: 12px;
+  color: var(--ink-3);
+  margin-top: 2px;
+  font-family: "JetBrains Mono", monospace;
+}
+.vote-result-total {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+/* 关闭观众投票时彻底隐藏（hidden 属性压过 display 规则） */
+#btnVote[hidden],
+#voteRatioBar[hidden],
+#votePanel[hidden] { display: none !important; }
+
+/* 票数页本身就是大图表，不再重复显示顶部票数条；柱子保底高度，桌面端不被压扁 */
+body[data-screen="vote-pre"] .vote-ratio-bar,
+body[data-screen="vote-final"] .vote-ratio-bar { display: none !important; }
+.vote-chart { flex: 0 0 auto; }
+.vote-chart-col { height: auto; grid-template-rows: auto auto auto; }
+.vote-chart-track { height: clamp(140px, 34vh, 400px); min-height: 0; }
+
+/* 票数页整体上移：去掉 main 顶部留白，图表更高 */
+body[data-screen="vote-pre"] main,
+body[data-screen="vote-final"] main { padding-top: clamp(0px, 0.6vh, 8px) !important; padding-bottom: clamp(8px, 1.6vh, 24px) !important; }
+body[data-screen="vote-pre"] .vote-page,
+body[data-screen="vote-final"] .vote-page { padding-top: 0 !important; }
+.vote-chart-track { height: clamp(150px, 40vh, 460px); }
+@media (max-height: 820px) {
+  html body[data-theme] .vote-chart-track { height: clamp(110px, 24vh, 200px); --vote-bar-w: clamp(44px, 5vw, 76px); width: var(--vote-bar-w); gap: 2px; }
+  html body[data-theme] .vote-chart-count { font-size: clamp(26px, 6vh, 46px) !important; line-height: 1 !important; }
+  html body[data-theme] .vote-chart-fill { min-height: 14px; max-height: calc(100% - clamp(26px, 6vh, 46px) - 4px); }
+  html body[data-theme] .vote-chart-col { row-gap: 2px; }
+  body[data-screen="vote-pre"] .vote-page-head,
+  body[data-screen="vote-final"] .vote-page-head { gap: 2px; }
 }

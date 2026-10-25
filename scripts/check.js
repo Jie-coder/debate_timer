@@ -6,6 +6,10 @@ const files = {
   index: path.join(root, 'index.html'),
   css: path.join(root, 'style.css'),
   js: path.join(root, 'app.js'),
+  voteCore: path.join(root, 'vote-core.js'),
+  voteHost: path.join(root, 'vote-host.js'),
+  vote: path.join(root, 'vote.html'),
+  configExample: path.join(root, 'config.example.js'),
   single: path.join(root, '辩论计时器（bj）.html'),
 };
 
@@ -22,8 +26,29 @@ function assert(condition, message) {
 const index = read(files.index);
 const css = read(files.css);
 const js = read(files.js);
+const voteCoreJs = read(files.voteCore);
+const voteHostJs = read(files.voteHost);
+const voteHtml = read(files.vote);
+const configExample = read(files.configExample);
 
 new Function(js);
+new Function(voteCoreJs);
+new Function(voteHostJs);
+
+assert(index.includes('<script src="vote-core.js" defer></script>'), 'index.html must load vote-core.js');
+assert(index.includes('<script src="vote-host.js" defer></script>'), 'index.html must load vote-host.js');
+assert(index.includes('<script src="config.js" defer></script>'), 'index.html must optionally load config.js');
+assert(index.includes('id="btnVote"'), 'index.html must have the vote icon button');
+assert(index.includes('id="votePanel"'), 'index.html must have the vote panel');
+assert(index.includes('id="voteRatioBar"'), 'index.html must have the vote ratio bar');
+assert(css.includes('.vote-ratio-bar'), 'style.css must style the vote ratio bar');
+assert(css.includes('body[data-screen="cover"] .vote-ratio-bar'), 'style.css must hide the vote ratio bar on cover');
+assert(voteCoreJs.includes('window.VoteCore'), 'vote-core.js must export window.VoteCore');
+assert(voteCoreJs.includes('module.exports'), 'vote-core.js must export module.exports for tests');
+assert(voteHostJs.includes('VoteCore'), 'vote-host.js must use VoteCore');
+assert(voteHtml.includes('DEBATE_VOTE_CONFIG'), 'vote.html must read window.DEBATE_VOTE_CONFIG');
+assert(voteHtml.includes('room'), 'vote.html must read the room query param');
+assert(configExample.includes('DEBATE_VOTE_CONFIG'), 'config.example.js must define window.DEBATE_VOTE_CONFIG');
 
 assert(index.includes('<link rel="stylesheet" href="style.css">'), 'index.html must load style.css');
 assert(index.includes('<script src="app.js" defer></script>'), 'index.html must load app.js');
