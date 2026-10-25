@@ -53,7 +53,7 @@
   var state = {
     enabled: readTimerVoteEnabled(),
     room: (savedSession && savedSession.room) || genRoomCode(),
-    phase: (savedSession && savedSession.phase) || 'idle', // idle | collecting | live | closed
+    phase: (savedSession && savedSession.phase) || 'idle', // idle | collecting | paused | live | closed
     baseline: (savedSession && savedSession.baseline) || null,
     tally: (savedSession && savedSession.votes) ? VC.restoreVotes(savedSession.votes) : VC.createTally(),
     ratioBarOn: savedSession ? !!savedSession.ratioBarOn : true,
@@ -80,7 +80,7 @@
       'btnVote', 'votePanel', 'voteOverlay', 'voteClose',
       'voteConfigWarning', 'voteMainSection',
       'voteRoomCode', 'voteQrWrap', 'voteLinkInput', 'voteCopyLink', 'voteNewRoom',
-      'votePhase', 'voteCounts', 'voteStartBtn', 'voteLockBaseline', 'voteEndBtn', 'voteResetBtn',
+      'votePhase', 'voteCounts', 'voteStartBtn', 'voteLockBaseline', 'voteReopenBtn', 'voteEndBtn', 'voteResetBtn',
       'voteResultSection', 'voteResultBox', 'voteExportJson', 'voteExportCsv',
       'voteSwRatioBar', 'voteHistoryList',
       'voteRatioBar', 'vrbPro', 'vrbCon', 'vrbFillPro', 'vrbFillCon',
@@ -153,6 +153,7 @@
   var PHASE_LABEL = {
     idle: '未开始',
     collecting: '投票中（初始立场）',
+    paused: '已锁票（初始立场已锁定）',
     live: '投票中（直播）',
     closed: '已结束',
   };
@@ -213,7 +214,8 @@
     if (dom.votePhase) dom.votePhase.textContent = PHASE_LABEL[state.phase] || state.phase;
     setHidden(dom.voteStartBtn, state.phase !== 'idle');
     setHidden(dom.voteLockBaseline, state.phase !== 'collecting');
-    setHidden(dom.voteEndBtn, state.phase !== 'collecting' && state.phase !== 'live');
+    setHidden(dom.voteEndBtn, state.phase !== 'collecting' && state.phase !== 'live' && state.phase !== 'paused');
+    setHidden(dom.voteReopenBtn, state.phase !== 'paused');
     setHidden(dom.voteResultSection, state.phase !== 'closed' || !state.result);
     if (state.phase === 'closed' && state.result) renderResult(state.result);
   }
@@ -265,6 +267,8 @@
     setHidden(dom.voteConfigWarning, ok);
     setHidden(dom.voteMainSection, !ok);
   }
+
+  function getPhase() { return state.phase; }
 
   function render() {
     renderConfigState();
@@ -321,7 +325,7 @@
   }
 
   function openOrClosedType() {
-    return (state.phase === 'idle' || state.phase === 'closed') ? 'closed' : 'open';
+    return (state.phase === 'idle' || state.phase === 'closed' || state.phase === 'paused') ? 'closed' : 'open';
   }
 
   // 计时器当前主题（app.js 设在 <body data-theme>），投票页要跟着同步显示。
@@ -348,6 +352,7 @@
 
   function handleIncoming(payload) {
     if (!payload || payload.type !== 'vote') return;
+    if (openOrClosedType() === 'closed') return; // 锁票 / 结束后到达的票一律不计
     if (VC.applyVote(state.tally, payload)) {
       persistSession();
       updateCountsUI();
@@ -431,8 +436,26 @@
     persistSession();
     render();
   }
+  // 赛前票数页的「锁票」：冻结初始立场作为赛后增减的基准，同时关闭投票（手机显示已结束、按钮禁用、迟到的票不计）。
+  function doLockPre() {
+    if (state.phase !== 'collecting') return;
+    state.baseline = VC.snapshotBaseline(state.tally);
+    state.phase = 'paused';
+    persistSession();
+    broadcastPhase();
+    render();
+  }
+  // 锁票后重新开放 = 进入赛后投票（直播），基准保持不变。
+  function doReopen() {
+    if (state.phase !== 'paused') return;
+    state.phase = 'live';
+    persistSession();
+    broadcastPhase();
+    broadcastSync();
+    render();
+  }
   function doEnd() {
-    if (state.phase !== 'collecting' && state.phase !== 'live') return;
+    if (state.phase !== 'collecting' && state.phase !== 'live' && state.phase !== 'paused') return;
     state.result = VC.buildResult(state.room, state.baseline, state.tally);
     state.phase = 'closed';
     state.history.push(state.result);
@@ -524,6 +547,7 @@
 
     if (dom.voteStartBtn) dom.voteStartBtn.addEventListener('click', doStart);
     if (dom.voteLockBaseline) dom.voteLockBaseline.addEventListener('click', doLockBaseline);
+    if (dom.voteReopenBtn) dom.voteReopenBtn.addEventListener('click', doReopen);
     if (dom.voteEndBtn) dom.voteEndBtn.addEventListener('click', doEnd);
     if (dom.voteResetBtn) dom.voteResetBtn.addEventListener('click', doReset);
     if (dom.voteNewRoom) dom.voteNewRoom.addEventListener('click', doNewRoom);
@@ -570,7 +594,7 @@
     if (hasConfig()) connect();
   }
 
-  window.VoteHost = { setEnabled: setEnabled, getSnapshot: getSnapshot };
+  window.VoteHost = { setEnabled: setEnabled, getSnapshot: getSnapshot, getPhase: getPhase, lockPre: doLockPre, reopen: doReopen };
 
   init();
 })();

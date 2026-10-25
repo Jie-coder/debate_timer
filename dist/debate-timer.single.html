@@ -4576,6 +4576,26 @@ body[data-screen="vote-final"] .vote-page { padding-top: 0 !important; }
   body[data-screen="vote-final"] .vote-page-head { gap: 2px; }
 }
 
+/* 首页辩题尽量用满整张卡片的宽度（不缩字号）：输入框伸进卡片左右内边距，只留一点边。
+   以 .stage-cover 为容器，100cqw ≈ 卡片外宽。 */
+html body[data-theme] .stage-cover { container-type: inline-size; padding-inline: clamp(4px, 0.8vw, 18px) !important; }
+html body[data-theme] .cover-head { width: 100%; }
+html body[data-theme] .cover-topic-input {
+  width: calc(100cqw - 14px) !important;
+  max-width: none;
+  margin-inline: calc((100% - (100cqw - 14px)) / 2) !important;
+  padding-inline: 0 !important;
+}
+
+/* 赛前票数页「锁票」按钮：沿用主题的 .btn-ghost（和「下一环节」同款），居中放在图表下方 */
+.vote-page-actions { display: flex; justify-content: center; margin-top: clamp(4px, 1.2vh, 14px); flex-shrink: 0; }
+.vote-lock-btn { min-width: clamp(120px, 11vw, 180px); justify-content: center; }
+.vote-lock-btn[disabled] { opacity: 0.55; cursor: default; }
+@media (max-height: 820px) {
+  .vote-page-actions { margin-top: 2px; }
+  html body[data-theme] .vote-lock-btn { padding-block: 6px !important; min-height: 0 !important; }
+}
+
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js" defer></script>
@@ -4897,6 +4917,7 @@ body[data-screen="vote-final"] .vote-page { padding-top: 0 !important; }
       <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
         <button class="preset-new-btn" id="voteStartBtn" type="button">开始投票</button>
         <button class="preset-new-btn" id="voteLockBaseline" type="button">锁定初始立场</button>
+        <button class="preset-new-btn" id="voteReopenBtn" type="button" hidden>重新开放投票</button>
         <button class="preset-new-btn" id="voteEndBtn" type="button">结束投票</button>
         <button class="chip" id="voteResetBtn" type="button">重置</button>
       </div>
@@ -5124,7 +5145,7 @@ body[data-screen="vote-final"] .vote-page { padding-top: 0 !important; }
   var state = {
     enabled: readTimerVoteEnabled(),
     room: (savedSession && savedSession.room) || genRoomCode(),
-    phase: (savedSession && savedSession.phase) || 'idle', // idle | collecting | live | closed
+    phase: (savedSession && savedSession.phase) || 'idle', // idle | collecting | paused | live | closed
     baseline: (savedSession && savedSession.baseline) || null,
     tally: (savedSession && savedSession.votes) ? VC.restoreVotes(savedSession.votes) : VC.createTally(),
     ratioBarOn: savedSession ? !!savedSession.ratioBarOn : true,
@@ -5151,7 +5172,7 @@ body[data-screen="vote-final"] .vote-page { padding-top: 0 !important; }
       'btnVote', 'votePanel', 'voteOverlay', 'voteClose',
       'voteConfigWarning', 'voteMainSection',
       'voteRoomCode', 'voteQrWrap', 'voteLinkInput', 'voteCopyLink', 'voteNewRoom',
-      'votePhase', 'voteCounts', 'voteStartBtn', 'voteLockBaseline', 'voteEndBtn', 'voteResetBtn',
+      'votePhase', 'voteCounts', 'voteStartBtn', 'voteLockBaseline', 'voteReopenBtn', 'voteEndBtn', 'voteResetBtn',
       'voteResultSection', 'voteResultBox', 'voteExportJson', 'voteExportCsv',
       'voteSwRatioBar', 'voteHistoryList',
       'voteRatioBar', 'vrbPro', 'vrbCon', 'vrbFillPro', 'vrbFillCon',
@@ -5224,6 +5245,7 @@ body[data-screen="vote-final"] .vote-page { padding-top: 0 !important; }
   var PHASE_LABEL = {
     idle: '未开始',
     collecting: '投票中（初始立场）',
+    paused: '已锁票（初始立场已锁定）',
     live: '投票中（直播）',
     closed: '已结束',
   };
@@ -5284,7 +5306,8 @@ body[data-screen="vote-final"] .vote-page { padding-top: 0 !important; }
     if (dom.votePhase) dom.votePhase.textContent = PHASE_LABEL[state.phase] || state.phase;
     setHidden(dom.voteStartBtn, state.phase !== 'idle');
     setHidden(dom.voteLockBaseline, state.phase !== 'collecting');
-    setHidden(dom.voteEndBtn, state.phase !== 'collecting' && state.phase !== 'live');
+    setHidden(dom.voteEndBtn, state.phase !== 'collecting' && state.phase !== 'live' && state.phase !== 'paused');
+    setHidden(dom.voteReopenBtn, state.phase !== 'paused');
     setHidden(dom.voteResultSection, state.phase !== 'closed' || !state.result);
     if (state.phase === 'closed' && state.result) renderResult(state.result);
   }
@@ -5336,6 +5359,8 @@ body[data-screen="vote-final"] .vote-page { padding-top: 0 !important; }
     setHidden(dom.voteConfigWarning, ok);
     setHidden(dom.voteMainSection, !ok);
   }
+
+  function getPhase() { return state.phase; }
 
   function render() {
     renderConfigState();
@@ -5392,7 +5417,7 @@ body[data-screen="vote-final"] .vote-page { padding-top: 0 !important; }
   }
 
   function openOrClosedType() {
-    return (state.phase === 'idle' || state.phase === 'closed') ? 'closed' : 'open';
+    return (state.phase === 'idle' || state.phase === 'closed' || state.phase === 'paused') ? 'closed' : 'open';
   }
 
   // 计时器当前主题（app.js 设在 <body data-theme>），投票页要跟着同步显示。
@@ -5419,6 +5444,7 @@ body[data-screen="vote-final"] .vote-page { padding-top: 0 !important; }
 
   function handleIncoming(payload) {
     if (!payload || payload.type !== 'vote') return;
+    if (openOrClosedType() === 'closed') return; // 锁票 / 结束后到达的票一律不计
     if (VC.applyVote(state.tally, payload)) {
       persistSession();
       updateCountsUI();
@@ -5502,8 +5528,26 @@ body[data-screen="vote-final"] .vote-page { padding-top: 0 !important; }
     persistSession();
     render();
   }
+  // 赛前票数页的「锁票」：冻结初始立场作为赛后增减的基准，同时关闭投票（手机显示已结束、按钮禁用、迟到的票不计）。
+  function doLockPre() {
+    if (state.phase !== 'collecting') return;
+    state.baseline = VC.snapshotBaseline(state.tally);
+    state.phase = 'paused';
+    persistSession();
+    broadcastPhase();
+    render();
+  }
+  // 锁票后重新开放 = 进入赛后投票（直播），基准保持不变。
+  function doReopen() {
+    if (state.phase !== 'paused') return;
+    state.phase = 'live';
+    persistSession();
+    broadcastPhase();
+    broadcastSync();
+    render();
+  }
   function doEnd() {
-    if (state.phase !== 'collecting' && state.phase !== 'live') return;
+    if (state.phase !== 'collecting' && state.phase !== 'live' && state.phase !== 'paused') return;
     state.result = VC.buildResult(state.room, state.baseline, state.tally);
     state.phase = 'closed';
     state.history.push(state.result);
@@ -5595,6 +5639,7 @@ body[data-screen="vote-final"] .vote-page { padding-top: 0 !important; }
 
     if (dom.voteStartBtn) dom.voteStartBtn.addEventListener('click', doStart);
     if (dom.voteLockBaseline) dom.voteLockBaseline.addEventListener('click', doLockBaseline);
+    if (dom.voteReopenBtn) dom.voteReopenBtn.addEventListener('click', doReopen);
     if (dom.voteEndBtn) dom.voteEndBtn.addEventListener('click', doEnd);
     if (dom.voteResetBtn) dom.voteResetBtn.addEventListener('click', doReset);
     if (dom.voteNewRoom) dom.voteNewRoom.addEventListener('click', doNewRoom);
@@ -5641,7 +5686,7 @@ body[data-screen="vote-final"] .vote-page { padding-top: 0 !important; }
     if (hasConfig()) connect();
   }
 
-  window.VoteHost = { setEnabled: setEnabled, getSnapshot: getSnapshot };
+  window.VoteHost = { setEnabled: setEnabled, getSnapshot: getSnapshot, getPhase: getPhase, lockPre: doLockPre, reopen: doReopen };
 
   init();
 })();
@@ -6107,13 +6152,32 @@ body[data-screen="vote-final"] .vote-page { padding-top: 0 !important; }
     el.style.maxWidth = '';
     el.style.marginInline = '';
     el.style.textWrap = '';
-    preferCommaBreak(el);
-    el.style.height = 'auto';
-    const scrollH = el.scrollHeight;
-    el.style.height = scrollH + 'px';
-    const lineHeight = parseFloat(getComputedStyle(el).fontSize) * 1.25;
-    const lines = lineHeight > 0 ? Math.max(2, Math.ceil(scrollH / lineHeight)) : 2;
-    el.style.setProperty('--cover-topic-lines', lines);
+    el.style.removeProperty('font-size');
+    const measure = () => {
+      preferCommaBreak(el);
+      el.style.height = 'auto';
+      const scrollH = el.scrollHeight;
+      el.style.height = scrollH + 'px';
+      const lineHeight = parseFloat(getComputedStyle(el).fontSize) * 1.25;
+      const lines = lineHeight > 0 ? Math.max(2, Math.ceil(scrollH / lineHeight)) : 2;
+      el.style.setProperty('--cover-topic-lines', lines);
+    };
+    measure();
+    // 平常的题目保持大字号；只有超长题目把封面撑出屏幕时，才逐步缩小字号直到放得下。
+    const card = el.closest('.cover-page') || el.parentElement;
+    const bound = stage.getBoundingClientRect();
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    const contentBottom = () => { let m = 0; card.querySelectorAll('*').forEach(n => { const r = n.getBoundingClientRect(); if (r.height > 0 && r.bottom > m) m = r.bottom; }); return m; };
+    const overflows = () => card.scrollHeight > card.clientHeight + 1 || contentBottom() > bound.bottom + 1 ||
+      card.getBoundingClientRect().bottom > vh - 4 || document.documentElement.scrollHeight > vh + 1;
+    let guard = 14;
+    while (bound.height > 0 && overflows() && guard-- > 0) {
+      const fs = parseFloat(getComputedStyle(el).fontSize);
+      if (!(fs > 16)) break;
+      el.style.setProperty('font-size', Math.floor(fs * 0.92) + 'px', 'important');
+      el.style.maxWidth = ''; el.style.marginInline = ''; el.style.textWrap = '';
+      measure();
+    }
   }
 
   // 两行就能放下的题目，如果中间附近有逗号等标点，就把输入框收窄到“逗号前/后”两段中较宽的那段，
@@ -6277,6 +6341,36 @@ body[data-screen="vote-final"] .vote-page { padding-top: 0 !important; }
     applyVoteChartValues(chart, counts, deltas, !prefersReducedMotion());
   }
 
+  // 赛前票数页底下的「锁票」按钮：投票中 → 锁票；已锁票 → 重新开放（进入赛后投票）。
+  function votePreLockState(snap) {
+    const ph = snap.phase;
+    if (ph === 'collecting') return { label: '\u9501\u7968', action: 'lock', disabled: false, locked: false };
+    if (ph === 'paused') return { label: '\u91cd\u65b0\u5f00\u653e\u6295\u7968', action: 'reopen', disabled: false, locked: true };
+    if (ph === 'live' || ph === 'closed') return { label: '\u5df2\u9501\u7968', action: '', disabled: true, locked: true };
+    return { label: '\u9501\u7968', action: '', disabled: true, locked: false };
+  }
+  function votePreLockHTML(snap) {
+    const st = votePreLockState(snap);
+    return '<div class="vote-page-actions"><button type="button" class="btn btn-ghost vote-lock-btn' + (st.locked ? ' is-locked' : '') +
+      '" data-vote-action="' + st.action + '"' + (st.disabled ? ' disabled' : '') + '>' +
+      (st.locked ? '\ud83d\udd12 ' : '') + st.label + '</button></div>';
+  }
+  function paintVotePreLock(snap) {
+    const btn = stage.querySelector('.vote-lock-btn');
+    if (!btn) return;
+    const st = votePreLockState(snap);
+    btn.textContent = (st.locked ? '\ud83d\udd12 ' : '') + st.label;
+    btn.disabled = st.disabled;
+    btn.dataset.voteAction = st.action;
+    btn.classList.toggle('is-locked', st.locked);
+  }
+  stage.addEventListener('click', e => {
+    const btn = e.target.closest && e.target.closest('.vote-lock-btn');
+    if (!btn || btn.disabled || !window.VoteHost) return;
+    if (btn.dataset.voteAction === 'lock' && window.VoteHost.lockPre) window.VoteHost.lockPre();
+    else if (btn.dataset.voteAction === 'reopen' && window.VoteHost.reopen) window.VoteHost.reopen();
+  });
+
   function renderVotePre() {
     const snap = voteSnapshot();
     const locked = !!snap.baseline;
@@ -6289,8 +6383,9 @@ body[data-screen="vote-final"] .vote-page { padding-top: 0 !important; }
       const totalEl = stage.querySelector('.vote-page-total');
       if (totalEl) totalEl.textContent = '\u5171 ' + total + ' \u4eba';
       const hintEl = stage.querySelector('.vote-page-hint');
-      if (hintEl) hintEl.textContent = locked ? '\u521d\u59cb\u7acb\u573a\u5df2\u9501\u5b9a' : '\u5728\u6295\u7968\u9762\u677f\u9501\u5b9a\u521d\u59cb\u7acb\u573a';
+      if (hintEl) hintEl.textContent = locked ? '\u521d\u59cb\u7acb\u573a\u5df2\u9501\u5b9a' : '\u9501\u7968\u540e\uff0c\u5f53\u524d\u7968\u6570\u4f5c\u4e3a\u8d5b\u540e\u589e\u51cf\u7684\u57fa\u51c6';
       paintVoteChartUpdate(chart, counts, null);
+      paintVotePreLock(snap);
       return;
     }
     stage.innerHTML =
@@ -6304,7 +6399,8 @@ body[data-screen="vote-final"] .vote-page { padding-top: 0 !important; }
           '</div>' +
         '</div>' +
         buildVoteChartHTML(counts, null) +
-        '<p class="vote-page-hint">' + (locked ? '\u521d\u59cb\u7acb\u573a\u5df2\u9501\u5b9a' : '\u5728\u6295\u7968\u9762\u677f\u9501\u5b9a\u521d\u59cb\u7acb\u573a') + '</p>' +
+        '<p class="vote-page-hint">' + (locked ? '\u521d\u59cb\u7acb\u573a\u5df2\u9501\u5b9a' : '\u9501\u7968\u540e\uff0c\u5f53\u524d\u7968\u6570\u4f5c\u4e3a\u8d5b\u540e\u589e\u51cf\u7684\u57fa\u51c6') + '</p>' +
+        votePreLockHTML(snap) +
       '</section>';
     stage.dataset.voteView = 'pre';
     paintVoteChartFresh(stage.querySelector('.vote-chart'), counts, null);

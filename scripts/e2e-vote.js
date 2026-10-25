@@ -166,9 +166,29 @@ async function main() {
     await waitHostCounts('改票后总票数不变、按新立场计数（1 正方 / 2 反方，共 3 人）');
 
     // ---------- 3) lock baseline, then switch votes -> deltas correct ----------
+    // ---------- 2b) 赛前「锁票」：手机显示已结束，锁票后到达的票不计 ----------
     const baselineAtLock = expectedCounts();
-    await host.click('#voteLockBaseline');
+    await host.evaluate(() => window.VoteHost.lockPre());
+    await waitForText(host.locator('#votePhase'), (t) => t.includes('已锁票'), 5000, 'phase=paused');
+    for (let i = 0; i < voters.length; i++) {
+      await voters[i].waitForSelector('#closedBanner:not([hidden])', { timeout: 8000 });
+      const dis = await voters[i].evaluate(() => document.getElementById('btnPro').disabled);
+      assert(dis, '锁票后观众 #' + (i + 1) + ' 显示投票已结束、按钮禁用', dis);
+    }
+    // 绕过禁用的按钮强行发一票（模拟锁票瞬间迟到的票）：主持端必须忽略
+    const countsAtLock = await host.locator('#voteCounts').textContent();
+    await voters[2].evaluate(() => { const b = document.getElementById('btnPro'); b.disabled = false; b.click(); });
+    await sleep(2500);
+    const countsAfterLate = await host.locator('#voteCounts').textContent();
+    assert(countsAfterLate === countsAtLock, '锁票后迟到的票不计入（票数不变）', { countsAtLock, countsAfterLate });
+
+    // 重新开放 = 进入赛后投票，基准保持锁票时的票数
+    await host.evaluate(() => window.VoteHost.reopen());
     await waitForText(host.locator('#votePhase'), (t) => t.includes('直播'), 5000, 'phase=live');
+    await sleep(1500);
+    await waitHostCounts('重新开放后，锁票期间那张迟到的票仍不计入，基准不变');
+    await voters[2].waitForFunction(() => document.getElementById('closedBanner').hidden === true, null, { timeout: 8000 });
+    assert(true, '重新开放后观众端横幅消失、可以继续投票');
 
     // 只改一票：如果连续改两票，中途的总票数可能和锁定基准前的总票数凑巧相等
     // （总数相同但归属不同），会让"等计数达到目标值"提前误判为改票已生效。

@@ -4568,3 +4568,23 @@ body[data-screen="vote-final"] .vote-page { padding-top: 0 !important; }
   body[data-screen="vote-pre"] .vote-page-head,
   body[data-screen="vote-final"] .vote-page-head { gap: 2px; }
 }
+
+/* 首页辩题尽量用满整张卡片的宽度（不缩字号）：输入框伸进卡片左右内边距，只留一点边。
+   以 .stage-cover 为容器，100cqw ≈ 卡片外宽。 */
+html body[data-theme] .stage-cover { container-type: inline-size; padding-inline: clamp(4px, 0.8vw, 18px) !important; }
+html body[data-theme] .cover-head { width: 100%; }
+html body[data-theme] .cover-topic-input {
+  width: calc(100cqw - 14px) !important;
+  max-width: none;
+  margin-inline: calc((100% - (100cqw - 14px)) / 2) !important;
+  padding-inline: 0 !important;
+}
+
+/* 赛前票数页「锁票」按钮：沿用主题的 .btn-ghost（和「下一环节」同款），居中放在图表下方 */
+.vote-page-actions { display: flex; justify-content: center; margin-top: clamp(4px, 1.2vh, 14px); flex-shrink: 0; }
+.vote-lock-btn { min-width: clamp(120px, 11vw, 180px); justify-content: center; }
+.vote-lock-btn[disabled] { opacity: 0.55; cursor: default; }
+@media (max-height: 820px) {
+  .vote-page-actions { margin-top: 2px; }
+  html body[data-theme] .vote-lock-btn { padding-block: 6px !important; min-height: 0 !important; }
+}

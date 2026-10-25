@@ -457,13 +457,32 @@
     el.style.maxWidth = '';
     el.style.marginInline = '';
     el.style.textWrap = '';
-    preferCommaBreak(el);
-    el.style.height = 'auto';
-    const scrollH = el.scrollHeight;
-    el.style.height = scrollH + 'px';
-    const lineHeight = parseFloat(getComputedStyle(el).fontSize) * 1.25;
-    const lines = lineHeight > 0 ? Math.max(2, Math.ceil(scrollH / lineHeight)) : 2;
-    el.style.setProperty('--cover-topic-lines', lines);
+    el.style.removeProperty('font-size');
+    const measure = () => {
+      preferCommaBreak(el);
+      el.style.height = 'auto';
+      const scrollH = el.scrollHeight;
+      el.style.height = scrollH + 'px';
+      const lineHeight = parseFloat(getComputedStyle(el).fontSize) * 1.25;
+      const lines = lineHeight > 0 ? Math.max(2, Math.ceil(scrollH / lineHeight)) : 2;
+      el.style.setProperty('--cover-topic-lines', lines);
+    };
+    measure();
+    // 平常的题目保持大字号；只有超长题目把封面撑出屏幕时，才逐步缩小字号直到放得下。
+    const card = el.closest('.cover-page') || el.parentElement;
+    const bound = stage.getBoundingClientRect();
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    const contentBottom = () => { let m = 0; card.querySelectorAll('*').forEach(n => { const r = n.getBoundingClientRect(); if (r.height > 0 && r.bottom > m) m = r.bottom; }); return m; };
+    const overflows = () => card.scrollHeight > card.clientHeight + 1 || contentBottom() > bound.bottom + 1 ||
+      card.getBoundingClientRect().bottom > vh - 4 || document.documentElement.scrollHeight > vh + 1;
+    let guard = 14;
+    while (bound.height > 0 && overflows() && guard-- > 0) {
+      const fs = parseFloat(getComputedStyle(el).fontSize);
+      if (!(fs > 16)) break;
+      el.style.setProperty('font-size', Math.floor(fs * 0.92) + 'px', 'important');
+      el.style.maxWidth = ''; el.style.marginInline = ''; el.style.textWrap = '';
+      measure();
+    }
   }
 
   // 两行就能放下的题目，如果中间附近有逗号等标点，就把输入框收窄到“逗号前/后”两段中较宽的那段，
@@ -627,6 +646,36 @@
     applyVoteChartValues(chart, counts, deltas, !prefersReducedMotion());
   }
 
+  // 赛前票数页底下的「锁票」按钮：投票中 → 锁票；已锁票 → 重新开放（进入赛后投票）。
+  function votePreLockState(snap) {
+    const ph = snap.phase;
+    if (ph === 'collecting') return { label: '\u9501\u7968', action: 'lock', disabled: false, locked: false };
+    if (ph === 'paused') return { label: '\u91cd\u65b0\u5f00\u653e\u6295\u7968', action: 'reopen', disabled: false, locked: true };
+    if (ph === 'live' || ph === 'closed') return { label: '\u5df2\u9501\u7968', action: '', disabled: true, locked: true };
+    return { label: '\u9501\u7968', action: '', disabled: true, locked: false };
+  }
+  function votePreLockHTML(snap) {
+    const st = votePreLockState(snap);
+    return '<div class="vote-page-actions"><button type="button" class="btn btn-ghost vote-lock-btn' + (st.locked ? ' is-locked' : '') +
+      '" data-vote-action="' + st.action + '"' + (st.disabled ? ' disabled' : '') + '>' +
+      (st.locked ? '\ud83d\udd12 ' : '') + st.label + '</button></div>';
+  }
+  function paintVotePreLock(snap) {
+    const btn = stage.querySelector('.vote-lock-btn');
+    if (!btn) return;
+    const st = votePreLockState(snap);
+    btn.textContent = (st.locked ? '\ud83d\udd12 ' : '') + st.label;
+    btn.disabled = st.disabled;
+    btn.dataset.voteAction = st.action;
+    btn.classList.toggle('is-locked', st.locked);
+  }
+  stage.addEventListener('click', e => {
+    const btn = e.target.closest && e.target.closest('.vote-lock-btn');
+    if (!btn || btn.disabled || !window.VoteHost) return;
+    if (btn.dataset.voteAction === 'lock' && window.VoteHost.lockPre) window.VoteHost.lockPre();
+    else if (btn.dataset.voteAction === 'reopen' && window.VoteHost.reopen) window.VoteHost.reopen();
+  });
+
   function renderVotePre() {
     const snap = voteSnapshot();
     const locked = !!snap.baseline;
@@ -639,8 +688,9 @@
       const totalEl = stage.querySelector('.vote-page-total');
       if (totalEl) totalEl.textContent = '\u5171 ' + total + ' \u4eba';
       const hintEl = stage.querySelector('.vote-page-hint');
-      if (hintEl) hintEl.textContent = locked ? '\u521d\u59cb\u7acb\u573a\u5df2\u9501\u5b9a' : '\u5728\u6295\u7968\u9762\u677f\u9501\u5b9a\u521d\u59cb\u7acb\u573a';
+      if (hintEl) hintEl.textContent = locked ? '\u521d\u59cb\u7acb\u573a\u5df2\u9501\u5b9a' : '\u9501\u7968\u540e\uff0c\u5f53\u524d\u7968\u6570\u4f5c\u4e3a\u8d5b\u540e\u589e\u51cf\u7684\u57fa\u51c6';
       paintVoteChartUpdate(chart, counts, null);
+      paintVotePreLock(snap);
       return;
     }
     stage.innerHTML =
@@ -654,7 +704,8 @@
           '</div>' +
         '</div>' +
         buildVoteChartHTML(counts, null) +
-        '<p class="vote-page-hint">' + (locked ? '\u521d\u59cb\u7acb\u573a\u5df2\u9501\u5b9a' : '\u5728\u6295\u7968\u9762\u677f\u9501\u5b9a\u521d\u59cb\u7acb\u573a') + '</p>' +
+        '<p class="vote-page-hint">' + (locked ? '\u521d\u59cb\u7acb\u573a\u5df2\u9501\u5b9a' : '\u9501\u7968\u540e\uff0c\u5f53\u524d\u7968\u6570\u4f5c\u4e3a\u8d5b\u540e\u589e\u51cf\u7684\u57fa\u51c6') + '</p>' +
+        votePreLockHTML(snap) +
       '</section>';
     stage.dataset.voteView = 'pre';
     paintVoteChartFresh(stage.querySelector('.vote-chart'), counts, null);
