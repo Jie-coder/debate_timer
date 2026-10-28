@@ -4999,3 +4999,17 @@ html body[data-theme] input[type="range"]::-moz-range-thumb {
   background: var(--rg-thumb); border: var(--rg-thumb-border); box-shadow: var(--rg-thumb-shadow); box-sizing: border-box;
 }
 html:root body[data-theme="poster"] .switch:not(.on) { border: 2px solid rgba(255,255,255,.55) !important; background: rgba(255,255,255,.08) !important; }
+
+/* 关闭状态的开关：各主题给出可见的轨道/描边（开启状态不变） */
+html:root body[data-theme="neo"] .switch:not(.on) { border: 2px solid #000 !important; background: #e8e4d8 !important; box-shadow: 2px 2px 0 #000 !important; }
+html:root body[data-theme="neo"] .switch:not(.on)::after { background: #fff !important; box-shadow: 0 0 0 2px #000 !important; }
+html:root body[data-theme="arena"] .switch:not(.on) { border: 1px solid rgba(127,176,255,.5) !important; background: rgba(76,141,255,.12) !important; box-shadow: 0 0 8px rgba(76,141,255,.25) !important; }
+html:root body[data-theme="arena"] .switch:not(.on)::after { background: #9db8e8 !important; }
+html:root body[data-theme="academy"] .switch:not(.on) { border: 2px solid #b08d57 !important; background: #ece3cf !important; }
+html:root body[data-theme="academy"] .switch:not(.on)::after { background: #fffdf7 !important; box-shadow: 0 0 0 1px #b08d57 !important; }
+html:root body[data-theme="soft"] .switch:not(.on) { border: 2px solid #c9cffc !important; background: #e3e6ff !important; }
+html:root body[data-theme="soft"] .switch:not(.on)::after { background: #fff !important; box-shadow: 0 1px 3px rgba(84,104,255,.35) !important; }
+html:root body[data-theme="broadcast"] .switch:not(.on) { border: 2px solid #ffd400 !important; background: #222 !important; }
+html:root body[data-theme="broadcast"] .switch:not(.on)::after { background: #888 !important; }
+html:root body[data-theme="terminal"] .switch:not(.on) { border: 1px solid #39ff88 !important; background: rgba(57,255,136,.06) !important; }
+html:root body[data-theme="terminal"] .switch:not(.on)::after { background: #1f7a45 !important; border-radius: 0 !important; }
