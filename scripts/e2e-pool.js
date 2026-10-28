@@ -163,7 +163,7 @@ const EXPECT = [
     assert(await page.locator('#duel').count() === 1 && await page.locator('#pool').count() === 0, '世界杯的自由辩论仍是双计时');
 
     // 布局：所有共用画面元素必须在舞台框内（留呼吸空间），大数字仍是最大元素
-    const THEMES = ['neo', 'arena', 'academy', 'soft', 'broadcast', 'terminal'];
+    const THEMES = ['neo', 'arena', 'academy', 'soft', 'broadcast', 'terminal', 'poster'];
     const VPS = [[1920, 1080, 1], [1024, 560, 1.25], [1366, 768, 1]];
     for (const [w, h, dsf] of VPS) {
       const lp = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: dsf });

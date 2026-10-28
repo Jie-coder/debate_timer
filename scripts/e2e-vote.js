@@ -264,6 +264,19 @@ async function main() {
     await vote(0, 'pro');
     await waitHostCounts('重开投票后新一轮计票从 0 开始、新票正确计入');
 
+    // ---------- 主题同步：主持端切到「海报对决」，观众页跟着切 ----------
+    await host.evaluate(() => {
+      document.querySelector('#btnSettings').click();
+      document.querySelector('#themeGroup .chip[data-theme="poster"]').click();
+      document.querySelector('#drawerClose').click();
+    });
+    for (let i = 0; i < voters.length; i++) {
+      let t = null;
+      try { await voters[i].waitForFunction(() => document.body.dataset.theme === 'poster', null, { timeout: 8000 }); t = 'poster'; }
+      catch (e) { t = await voters[i].evaluate(() => document.body.dataset.theme); }
+      assert(t === 'poster', '观众 #' + (i + 1) + ' 同步到海报对决主题', t);
+    }
+
     console.log('');
     console.log(passCount + ' passed, ' + failCount + ' failed');
     process.exitCode = failCount > 0 ? 1 : 0;

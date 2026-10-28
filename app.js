@@ -2124,7 +2124,7 @@
   }
 
   /* ---------------- Theme + font ---------------- */
-  const THEMES = ['neo', 'arena', 'academy', 'soft', 'broadcast', 'terminal'];
+  const THEMES = ['neo', 'arena', 'academy', 'soft', 'broadcast', 'terminal', 'poster'];
   function applyTheme() {
     // 旧版的 warm / dark / paper 已下线，存档里的旧值统一落到默认主题
     if (THEMES.indexOf(state.theme) < 0) state.theme = THEMES[0];

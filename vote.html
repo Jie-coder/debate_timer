@@ -8,8 +8,11 @@
   <meta name="apple-mobile-web-app-title" content="Jie's Debate Timer">
   <meta property="og:site_name" content="Jie's Debate Timer">
   <meta property="og:title" content="现场投票 · Jie's Debate Timer">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Sans+SC:wght@700;900&display=swap">
 <style>
-  /* 和计时器主题页保持同一套色板：6 套主题的 token 从 style.css 的
+  /* 和计时器主题页保持同一套色板：7 套主题的 token 从 style.css 的
    * html body[data-theme="..."] { --vf-*/--lk-* ... } 搬过来，按 vote.html
    * 自己这套更小的 UI（房间码 / 投票大按钮 / 结束横幅 / 错误提示）重新映射成
    * --vb-* 变量。主持端在 app.js 里切主题，会通过控制频道把 theme 广播给这
@@ -107,6 +110,24 @@
     --vb-ok: #2ecc71;
     --vb-pending: #ffd400;
     --vb-bad: #ff5c4d;
+  }
+  body[data-theme="poster"] {
+    --vb-radius: 6px;
+    --vb-bg: #060c2c;
+    --vb-surface: rgba(255, 255, 255, 0.07);
+    --vb-ink: #ffffff;
+    --vb-muted: #c9cce4;
+    --vb-pro: #1d4dff;
+    --vb-con: #d7192f;
+    --vb-btn-ink: #ffffff;
+    --vb-border: rgba(255, 255, 255, 0.6);
+    --vb-border-w: 2px;
+    --vb-shadow: 0 0 22px rgba(255, 255, 255, 0.18);
+    --vb-shadow-sm: 0 0 12px rgba(255, 255, 255, 0.15);
+    --vb-font: "Noto Sans SC", "Microsoft YaHei UI", "PingFang SC", sans-serif;
+    --vb-ok: #4cd98a;
+    --vb-pending: #ffd34d;
+    --vb-bad: #ff5c6c;
   }
   body[data-theme="terminal"] {
     --vb-radius: 2px;
@@ -237,6 +258,18 @@
     font-weight: 700;
     color: var(--vb-muted);
   }
+  /* 海报对决：藏青→酒红斜切渐变 + 烟雾光晕，按钮用毛笔字 */
+  html body[data-theme="poster"] {
+    background:
+      radial-gradient(70% 45% at 15% 15%, rgba(40, 90, 255, 0.35), transparent 60%),
+      radial-gradient(70% 45% at 85% 85%, rgba(230, 30, 60, 0.32), transparent 60%),
+      linear-gradient(150deg, #050a26 0%, #0a1a5a 34%, #1a0a2c 50%, #5a0a1c 66%, #22040b 100%);
+    background-attachment: fixed;
+  }
+  body[data-theme="poster"] .side-btn { font-size: 42px; font-family: "Ma Shan Zheng", "STXingkai", "KaiTi", serif; font-weight: 400; letter-spacing: 0.08em; text-shadow: 0 0 16px rgba(255, 255, 255, 0.45), 0 2px 0 rgba(0, 0, 0, 0.5); border-color: rgba(255, 255, 255, 0.75); }
+  body[data-theme="poster"] .side-pro { background: linear-gradient(135deg, #1d4dff, #0a1f6b); box-shadow: 0 0 26px rgba(29, 77, 255, 0.55); }
+  body[data-theme="poster"] .side-con { background: linear-gradient(135deg, #d7192f, #5e0b16); box-shadow: 0 0 26px rgba(215, 25, 47, 0.55); }
+  body[data-theme="poster"] .side-btn.active { box-shadow: 0 0 34px rgba(255, 255, 255, 0.55), inset 0 0 0 4px #fff; }
 </style>
 </head>
 <body>
@@ -326,7 +359,7 @@
     var mySide = loadSides()[room] || null;
     var votingClosed = false;
 
-    var THEMES = ['neo', 'arena', 'academy', 'soft', 'broadcast', 'terminal'];
+    var THEMES = ['neo', 'arena', 'academy', 'soft', 'broadcast', 'terminal', 'poster'];
     function applyTheme(theme) {
       document.body.dataset.theme = (THEMES.indexOf(theme) >= 0) ? theme : 'neo';
     }
