@@ -79,8 +79,21 @@ const EXPECT = [
     assert(await txt('#poolTurn') === '25' && await txt('#poolLeft') === '10:00', '初始 25 / 10:00');
 
     // 2. 共用总池递减
+    // 中间控制行只剩换边 / 重置；开始暂停由底部按钮负责
+    assert(await page.locator('#poolStart').count() === 0 && await page.locator('#poolSwitch').count() === 1 && await page.locator('#poolReset').count() === 1, '中间控制行无开始键，只有换边和重置');
+    const startLabel = () => page.evaluate(() => document.getElementById('startLabel').textContent.trim());
+    assert(await startLabel() === '开始', '底部按钮初始显示开始', await startLabel());
+    await page.click('#btnStart');
+    assert(await startLabel() === '暂停', '点底部按钮开始后显示暂停', await startLabel());
+    await page.clock.runFor(3000);
+    await page.click('#btnStart');
+    assert(await startLabel() === '开始', '点底部按钮暂停后显示开始', await startLabel());
+    const tp = await txt('#poolTurn');
+    await page.clock.runFor(5000);
+    assert(await txt('#poolTurn') === tp && tp === '22', '暂停期间不走', tp);
     await page.keyboard.press('Space');
-    await page.clock.runFor(7100);
+    assert(await startLabel() === '暂停', '空格继续计时', await startLabel());
+    await page.clock.runFor(4100);
     const t7 = await txt('#poolTurn');
     assert(t7 === '18', '跑 7 秒后单次剩 18', t7);
     assert(await txt('#poolLeft') === '09:53', '总池剩 09:53', await txt('#poolLeft'));

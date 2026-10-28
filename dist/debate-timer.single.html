@@ -6921,12 +6921,10 @@ html body[data-theme] .pool-compact .pool-actions { grid-area: act; }
         <div class="pool-left-row">双方共用剩余 <b id="poolLeft">${formatTime(state.pool.left)}</b></div>
         <div class="pool-bar pool-bar-left"><div class="pool-bar-fill" id="poolLeftFill"></div></div>
         <div class="pool-actions">
-          <button type="button" class="pool-btn pool-btn-primary" id="poolStart" title="开始 / 暂停（空格）">开始</button>
           <button type="button" class="pool-btn" id="poolSwitch" title="换边并重置单次发言（S）">⇄ 换到反方</button>
           <button type="button" class="pool-btn" id="poolReset" title="重置（R）">重置</button>
         </div>
       </div>`;
-    document.getElementById('poolStart').addEventListener('click', (e) => { e.currentTarget.blur(); toggleRun(); });
     document.getElementById('poolSwitch').addEventListener('click', (e) => { e.currentTarget.blur(); switchPoolSide(); });
     document.getElementById('poolReset').addEventListener('click', (e) => { e.currentTarget.blur(); resetTimer(); });
     ['pro', 'con'].forEach(k => document.getElementById('poolSide_' + k).addEventListener('click', (e) => {
@@ -7038,11 +7036,6 @@ html body[data-theme] .pool-compact .pool-actions { grid-area: act; }
     });
     const sw = document.getElementById('poolSwitch');
     if (sw) { sw.textContent = '⇄ 换到' + SIDE_LABEL[state.pool.active === 'pro' ? 'con' : 'pro']; sw.disabled = ended; }
-    const st = document.getElementById('poolStart');
-    if (st) {
-      st.textContent = state.running ? '暂停' : (ended ? '已结束' : '开始');
-      st.disabled = ended && !state.running;
-    }
     const root = document.getElementById('pool');
     if (root) root.dataset.active = state.pool.active;
   }
