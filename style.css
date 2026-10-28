@@ -4617,3 +4617,116 @@ html body[data-theme] .vote-page-eyebrow { display: none !important; }
 html body[data-theme] .vote-page .vote-chart-col { row-gap: clamp(2px, 0.6vh, 8px) !important; gap: clamp(2px, 0.6vh, 8px) !important; }
 html body[data-theme] .vote-page-pre .vote-page-hint { display: none; }
 html body[data-theme] .vote-page-actions { margin-top: 0 !important; }
+
+/* ============================================================
+   共用时间池（雅哲杯自由辩论）：25 秒单次发言是全屏最大的数字
+   ============================================================ */
+html body[data-theme][data-screen="pool"] .stage { display: flex; flex-direction: column; min-height: 0; }
+html body[data-theme] .pool {
+  --pool-pro: var(--lk-pro, #2f6bff);
+  --pool-con: var(--lk-con, #ff4f6d);
+  --pool-red: #e5202e;
+  --pool-side: var(--pool-pro);
+  flex: 1 1 auto; min-height: 0; width: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: calc(clamp(6px, 1.4vh, 16px) * var(--pf, 1));
+  padding: calc(clamp(8px, 1.6vh, 20px) * var(--pf, 1)) clamp(12px, 3vw, 48px);
+  overflow: hidden;
+  box-sizing: border-box;
+  color: var(--vf-ink, var(--ink));
+  font-family: var(--lk-ui, inherit);
+}
+html body[data-theme] .pool[data-active="con"] { --pool-side: var(--pool-con); }
+html body[data-theme] .pool-head {
+  width: min(1100px, 100%); display: flex; justify-content: space-between; align-items: baseline; gap: 16px;
+  font-size: calc(clamp(16px, 2.6vh, 30px) * (0.5 + var(--pf, 1) / 2)); font-weight: 800; letter-spacing: 0.04em;
+}
+html body[data-theme] .pool-shared { color: var(--vf-muted, var(--ink-2)); font-weight: 700; white-space: nowrap; }
+html body[data-theme] .pool-shared b { color: var(--vf-ink, var(--ink)); font-family: var(--lk-num, var(--lk-mono, "JetBrains Mono", monospace)); font-variant-numeric: tabular-nums; }
+html body[data-theme] .pool-sides {
+  width: min(1100px, 100%); display: grid; grid-template-columns: 1fr auto 1fr; align-items: stretch; gap: clamp(8px, 1.6vw, 24px);
+}
+html body[data-theme] .pool-vs { align-self: center; font-weight: 900; color: var(--vf-faint, var(--ink-3)); font-size: clamp(14px, 2.2vh, 24px); }
+html body[data-theme] .pool-side {
+  appearance: none; cursor: pointer; font: inherit; color: var(--vf-muted, var(--ink-2));
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  padding: calc(clamp(6px, 1.2vh, 14px) * var(--pf, 1)) 12px; border-radius: 14px;
+  background: var(--vf-paper-soft, rgba(127,127,127,0.08));
+  border: 3px solid transparent; opacity: 0.42; filter: saturate(0.4);
+  transition: opacity .15s, filter .15s, background .15s, border-color .15s, transform .15s;
+}
+html body[data-theme] .pool-side .pool-side-label { font-size: calc(clamp(22px, 4.6vh, 52px) * var(--pf, 1)); font-weight: 900; line-height: 1.05; letter-spacing: 0.08em; }
+html body[data-theme] .pool-side .pool-side-name { font-size: calc(clamp(12px, 1.8vh, 20px) * (0.5 + var(--pf, 1) / 2)); font-weight: 700; min-height: 1em; }
+html body[data-theme] .pool-side .pool-side-status { font-size: calc(clamp(12px, 1.7vh, 18px) * (0.5 + var(--pf, 1) / 2)); font-weight: 700; letter-spacing: 0.1em; }
+html body[data-theme] .pool-side.active { opacity: 1; filter: none; transform: scale(1.02); }
+html body[data-theme] .pool-side.active[data-side="pro"] { background: var(--pool-pro); border-color: var(--pool-pro); color: #fff; }
+html body[data-theme] .pool-side.active[data-side="con"] { background: var(--pool-con); border-color: var(--pool-con); color: #fff; }
+html body[data-theme] .pool-turn {
+  font-family: var(--lk-num, var(--lk-mono, "JetBrains Mono", monospace));
+  font-variant-numeric: tabular-nums; font-weight: 900; line-height: 0.9;
+  font-size: var(--pt, clamp(88px, min(31vh, 24vw), 400px));
+  color: var(--pool-side); letter-spacing: -0.02em; text-align: center;
+  transition: color .15s;
+}
+html body[data-theme] .pool-turn.warning { color: var(--pool-red); animation: pulse 0.8s ease infinite; }
+html body[data-theme] .pool-turn.overtime { color: var(--vf-faint, var(--ink-3)); animation: none; }
+html body[data-theme] .pool-turn-meta {
+  width: min(900px, 92%); display: flex; justify-content: space-between;
+  font-size: clamp(12px, 1.8vh, 20px); font-weight: 700; color: var(--vf-muted, var(--ink-2));
+}
+html body[data-theme] .pool-bar {
+  width: min(900px, 92%); border-radius: 999px; overflow: hidden;
+  background: var(--vf-track, rgba(127,127,127,0.2));
+  border: 2px solid var(--vf-line, transparent); box-sizing: border-box;
+}
+html body[data-theme] .pool-bar-turn { height: calc(clamp(14px, 2.4vh, 26px) * var(--pf, 1)) !important; }
+html body[data-theme] .pool-bar-left { height: calc(clamp(8px, 1.3vh, 14px) * var(--pf, 1)) !important; width: min(700px, 80%); }
+html body[data-theme] .pool-bar-fill { height: 100% !important; background: var(--pool-side); transition: width .12s linear, background .15s; }
+html body[data-theme] .pool-bar-left .pool-bar-fill { background: var(--vf-ink, var(--ink)); opacity: 0.7; }
+html body[data-theme] .pool-bar-fill.warning { background: var(--pool-red); }
+html body[data-theme] .pool-left-row {
+  margin-top: calc(clamp(2px, 0.8vh, 10px) * var(--pf, 1));
+  font-size: calc(clamp(16px, 3vh, 34px) * (0.5 + var(--pf, 1) / 2)); font-weight: 800; color: var(--vf-muted, var(--ink-2));
+}
+html body[data-theme] .pool-left-row b { color: var(--vf-ink, var(--ink)); font-family: var(--lk-num, var(--lk-mono, "JetBrains Mono", monospace)); font-variant-numeric: tabular-nums; margin-left: 0.3em; }
+html body[data-theme] .pool-actions { display: flex; gap: clamp(8px, 1.4vw, 18px); flex-wrap: wrap; justify-content: center; margin-top: calc(clamp(2px, 1vh, 12px) * var(--pf, 1)); }
+html body[data-theme] .pool-btn {
+  appearance: none; cursor: pointer; font: inherit; font-weight: 800;
+  font-size: calc(clamp(14px, 2.2vh, 22px) * (0.6 + var(--pf, 1) * 0.4)); padding: calc(clamp(6px, 1.1vh, 12px) * var(--pf, 1)) clamp(14px, 2vw, 28px);
+  border-radius: 12px; border: 2px solid var(--vf-line, var(--border-strong));
+  background: var(--vf-paper, var(--surface)); color: var(--vf-ink, var(--ink));
+}
+html body[data-theme] .pool-btn-primary { background: var(--pool-side); border-color: var(--pool-side); color: #fff; }
+html body[data-theme] .pool-btn:disabled { opacity: 0.45; cursor: default; }
+html body[data-theme="neo"] .pool-side, html body[data-theme="neo"] .pool-btn { border-radius: 2px; border-color: #000; box-shadow: var(--lk-shadow); }
+html body[data-theme="neo"] .pool-side.active { box-shadow: var(--lk-shadow-lg); }
+html body[data-theme="neo"] .pool-bar { border-color: #000; border-radius: 2px; }
+html body[data-theme="terminal"] .pool, html body[data-theme="terminal"] .pool-turn { font-family: var(--lk-mono) !important; }
+html body[data-theme="terminal"] .pool-side.active, html body[data-theme="terminal"] .pool-btn-primary { color: #020402; }
+html body[data-theme="terminal"] .pool-side, html body[data-theme="terminal"] .pool-btn, html body[data-theme="terminal"] .pool-bar { border-radius: 0; }
+@media (max-width: 760px), (max-height: 520px), (max-height: 700px) and (max-width: 1100px) and (orientation: landscape) {
+  html body[data-screen="pool"] #btnPrev,
+  html body[data-screen="pool"] #btnNext { display: none !important; }
+  html body[data-screen="pool"] #btnSwitch,
+  html body[data-screen="pool"] #btnResetAll { display: inline-flex !important; }
+  html body[data-theme] .pool-actions { display: none; }
+}
+html body[data-theme] .pool > * { flex-shrink: 0; }
+/* 矮舞台：正方/反方框放到大数字两侧，省出一整行给 25 秒数字 */
+html body[data-theme] .pool.pool-compact {
+  display: grid; justify-content: stretch; align-content: center; justify-items: center;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-areas: "head head head" "pro turn con" "meta meta meta" "tbar tbar tbar" "left left left" "lbar lbar lbar" "act act act";
+  column-gap: clamp(12px, 2.4vw, 40px);
+}
+html body[data-theme] .pool-compact .pool-sides { display: contents; }
+html body[data-theme] .pool-compact .pool-vs { display: none; }
+html body[data-theme] .pool-compact .pool-head { grid-area: head; }
+html body[data-theme] .pool-compact .pool-side[data-side="pro"] { grid-area: pro; justify-self: end; align-self: center; width: min(260px, 100%); }
+html body[data-theme] .pool-compact .pool-side[data-side="con"] { grid-area: con; justify-self: start; align-self: center; width: min(260px, 100%); }
+html body[data-theme] .pool-compact .pool-turn { grid-area: turn; }
+html body[data-theme] .pool-compact .pool-turn-meta { grid-area: meta; }
+html body[data-theme] .pool-compact .pool-bar-turn { grid-area: tbar; }
+html body[data-theme] .pool-compact .pool-left-row { grid-area: left; }
+html body[data-theme] .pool-compact .pool-bar-left { grid-area: lbar; }
+html body[data-theme] .pool-compact .pool-actions { grid-area: act; }

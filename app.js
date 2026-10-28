@@ -72,7 +72,35 @@
         { name: '正三结辩', type: 'single', duration: 180 },
       ],
     },
+    {
+      name: '雅哲杯',
+      stages: [
+        { name: '正一立论', type: 'single', duration: 240 },
+        { name: '反二质询正一', type: 'single', duration: 180 },
+        { name: '反一立论', type: 'single', duration: 240 },
+        { name: '正二质询反一', type: 'single', duration: 180 },
+        { name: '反二申论', type: 'single', duration: 180 },
+        { name: '正二申论', type: 'single', duration: 180 },
+        { name: '小讨论', type: 'single', duration: 60 },
+        { name: '自由辩论', type: 'pool', duration: 600, turn: 25, tag: '雅哲杯' },
+        { name: '讨论结论', type: 'single', duration: 120 },
+        { name: '反方总结', type: 'single', duration: 180 },
+        { name: '正方总结', type: 'single', duration: 180 },
+      ],
+    },
   ];
+
+  /* ---------------- 共用时间池（type 'pool'，雅哲杯自由辩论） ----------------
+     双方共用一个总时长 stg.duration，谁在发言就扣谁的；每次发言另有 stg.turn 秒
+     （默认 25）的单次上限，到点自动换边并重置。总池不足一次上限时，上限 = 总池剩余。
+     总池归零即停，和其他环节结束一样。 */
+  const POOL_TURN_DEFAULT = 25;
+  function poolTurnCap(stg) {
+    const t = Math.round(Number(stg && stg.turn));
+    return t >= 5 && t <= 600 ? t : POOL_TURN_DEFAULT;
+  }
+  /* Duel flow multipliers for total time: duel counts twice, pool once */
+  function stageTotalFactor(stg) { return stg && stg.type === 'duel' ? 2 : 1; }
 
   /* ---------------- Duel flow (双计时环节的结束行为) ----------------
      'relay' 交锋：一方归零后自动接续对方，适合自由辩、对辩、攻辩。
@@ -110,6 +138,8 @@
       if (!stg) return null;
       runtimeCache[id] = stg.type === 'duel'
         ? { duelPro: stg.duration, duelCon: stg.duration, duelActive: 'pro' }
+        : stg.type === 'pool'
+        ? { poolLeft: stg.duration, poolTurn: Math.min(poolTurnCap(stg), stg.duration), poolActive: 'pro' }
         : { remaining: stg.duration };
     }
     return runtimeCache[id];
@@ -135,6 +165,7 @@
     running: false,
     remaining: 180,
     duel: { pro: 120, con: 120, active: 'pro' },
+    pool: { left: 600, turn: 25, active: 'pro' },
     lastTick: 0,
   };
 
@@ -156,7 +187,7 @@
     cover.name = cover.name || base.name;
     state.stages = state.stages.map(s => {
       const noTimer = s.type === 'cover' || s.type === 'vote-pre' || s.type === 'vote-final';
-      const type = s.type === 'duel' ? 'duel' : (noTimer ? s.type : 'single');
+      const type = s.type === 'duel' || s.type === 'pool' ? s.type : (noTimer ? s.type : 'single');
       const out = {
         ...s,
         type,
@@ -164,6 +195,7 @@
       };
       // 只保留合法的显式设置，其余交给 duelFlowOf() 按环节名推断
       if (!isDuelFlow(out.duelFlow)) delete out.duelFlow;
+      if (type === 'pool') out.turn = poolTurnCap(out); else { delete out.turn; delete out.tag; }
       return out;
     });
     state.stages.unshift(cover);
@@ -410,6 +442,8 @@
       renderVoteFinal();
     } else if (mode === 'duel') {
       renderDuel();
+    } else if (mode === 'pool') {
+      renderPool();
     } else {
       renderSingle();
     }
@@ -1026,13 +1060,182 @@
       state.duel[otherSide] <= 0 ? '已结束' : (state.running ? '暂停中' : '待命');
   }
 
-  
+  /* ---------------- 共用时间池（雅哲杯自由辩论） ---------------- */
+  const SIDE_LABEL = { pro: '\u6b63\u65b9', con: '\u53cd\u65b9' };
+  function renderPool() {
+    const stg = curStage();
+    const head = stg.tag ? escapeHtml(stg.tag) + ' · ' + escapeHtml(stg.name) : escapeHtml(stg.name);
+    const sideBtn = (k) => `
+          <button type="button" class="pool-side" data-side="${k}" id="poolSide_${k}">
+            <span class="pool-side-label">${SIDE_LABEL[k]}</span>
+            <span class="pool-side-name" id="poolSideName_${k}"></span>
+            <span class="pool-side-status" id="poolSideStatus_${k}"></span>
+          </button>`;
+    stage.innerHTML = `
+      <div class="pool" id="pool">
+        <div class="pool-head">
+          <span class="pool-title">${head}</span>
+          <span class="pool-shared">共用 <b id="poolHeadLeft">${formatTime(state.pool.left)}</b></span>
+        </div>
+        <div class="pool-sides">${sideBtn('pro')}<span class="pool-vs">VS</span>${sideBtn('con')}</div>
+        <div class="pool-turn" id="poolTurn">${Math.ceil(state.pool.turn)}</div>
+        <div class="pool-turn-meta"><span>本次发言</span><span>上限 ${poolTurnCap(stg)} 秒</span></div>
+        <div class="pool-bar pool-bar-turn"><div class="pool-bar-fill" id="poolTurnFill"></div></div>
+        <div class="pool-left-row">双方共用剩余 <b id="poolLeft">${formatTime(state.pool.left)}</b></div>
+        <div class="pool-bar pool-bar-left"><div class="pool-bar-fill" id="poolLeftFill"></div></div>
+        <div class="pool-actions">
+          <button type="button" class="pool-btn pool-btn-primary" id="poolStart" title="开始 / 暂停（空格）">开始</button>
+          <button type="button" class="pool-btn" id="poolSwitch" title="换边并重置单次发言（S）">⇄ 换到反方</button>
+          <button type="button" class="pool-btn" id="poolReset" title="重置（R）">重置</button>
+        </div>
+      </div>`;
+    document.getElementById('poolStart').addEventListener('click', (e) => { e.currentTarget.blur(); toggleRun(); });
+    document.getElementById('poolSwitch').addEventListener('click', (e) => { e.currentTarget.blur(); switchPoolSide(); });
+    document.getElementById('poolReset').addEventListener('click', (e) => { e.currentTarget.blur(); resetTimer(); });
+    ['pro', 'con'].forEach(k => document.getElementById('poolSide_' + k).addEventListener('click', (e) => {
+      e.currentTarget.blur();
+      if (state.pool.active !== k) switchPoolSide(k);
+      else if (!state.running) toggleRun();
+    }));
+    updatePoolActive();
+    fitPool();
+  }
+
+  // 自由辩论（共用）画面按舞台高度自适应：先压缩侧框、间距、进度条（--pf 1→0.55），
+  // 仍放不下才缩小 25 秒大数字（--pt）。上下各留呼吸空间，保证所有元素都在舞台框内。
+  function poolNeeded(pool) {
+    const cs = getComputedStyle(pool);
+    const pad = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+    if (pool.classList.contains('pool-compact')) {
+      // grid：按行累加（同一行取最高）
+      const rows = new Map();
+      [...pool.querySelectorAll(':scope > *, :scope > .pool-sides > *')].forEach(k => {
+        if (k.classList.contains('pool-sides') || k.offsetParent === null) return;
+        const r = k.getBoundingClientRect();
+        const ga = getComputedStyle(k).gridRowStart;
+        const key = (ga === 'pro' || ga === 'con' || ga === 'turn') ? 'mid' : ga;
+        rows.set(key, Math.max(rows.get(key) || 0, r.height + (parseFloat(getComputedStyle(k).marginTop) || 0)));
+      });
+      const gap = parseFloat(cs.rowGap) || 0;
+      let h = pad + gap * Math.max(0, rows.size - 1);
+      rows.forEach(v => { h += v; });
+      return h;
+    }
+    const kids = [...pool.children].filter(k => k.offsetParent !== null);
+    const gap = parseFloat(cs.rowGap) || 0;
+    let h = pad + gap * Math.max(0, kids.length - 1);
+    kids.forEach(k => {
+      const r = k.getBoundingClientRect(), m = getComputedStyle(k);
+      h += r.height + (parseFloat(m.marginTop) || 0) + (parseFloat(m.marginBottom) || 0);
+    });
+    return h;
+  }
+  function fitPoolMode(pool, avail) {
+    pool.style.removeProperty('--pf');
+    pool.style.removeProperty('--pt');
+    let pf = 1;
+    while (poolNeeded(pool) > avail && pf > 0.55) {
+      pf = Math.max(0.55, pf - 0.05);
+      pool.style.setProperty('--pf', pf.toFixed(2));
+    }
+    const turn = document.getElementById('poolTurn');
+    const fs0 = parseFloat(getComputedStyle(turn).fontSize);
+    let fs = fs0, guard = 60;
+    while (poolNeeded(pool) > avail && fs > 40 && guard--) {
+      fs = Math.max(40, fs * 0.95);
+      pool.style.setProperty('--pt', fs.toFixed(1) + 'px');
+    }
+    return fs;
+  }
+  function fitPool() {
+    const pool = document.getElementById('pool');
+    if (!pool) return;
+    const st = pool.parentElement;
+    const avail = st.clientHeight - Math.max(14, st.clientHeight * 0.035) * 2;
+    if (avail <= 0) return;
+    pool.classList.remove('pool-compact');
+    const fsStack = fitPoolMode(pool, avail);
+    // 竖排要把 25 秒数字缩到原来的 70% 以下才放得下时，改用侧框在两边的紧凑布局
+    const natural = Math.min(400, Math.max(88, Math.min(innerHeight * 0.31, innerWidth * 0.24)));
+    if (fsStack < natural * 0.7 && innerWidth > 640) {
+      pool.classList.add('pool-compact');
+      const fsCompact = fitPoolMode(pool, avail);
+      if (fsCompact <= fsStack) { pool.classList.remove('pool-compact'); fitPoolMode(pool, avail); }
+    }
+  }
+  if (typeof ResizeObserver !== 'undefined') {
+    let poolFitRaf = 0;
+    const ro = new ResizeObserver(() => { cancelAnimationFrame(poolFitRaf); poolFitRaf = requestAnimationFrame(fitPool); });
+    const watchStage = () => { const st = document.querySelector('.stage'); if (st) ro.observe(st); };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watchStage); else watchStage();
+    new MutationObserver(() => requestAnimationFrame(fitPool)).observe(document.body || document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-screen', 'class'] });
+  }
+
+  function resetPoolTurn() {
+    state.pool.turn = Math.max(0, Math.min(poolTurnCap(curStage()), state.pool.left));
+  }
+
+  // 换边：切到对方（或指定一方）并重置单次发言；计时中接着跑，暂停时保持暂停
+  function switchPoolSide(side) {
+    if (curMode() !== 'pool') return;
+    if (state.pool.left <= 0) return;
+    const next = side === 'pro' || side === 'con' ? side : (state.pool.active === 'pro' ? 'con' : 'pro');
+    state.pool.active = next;
+    resetPoolTurn();
+    updatePoolActive();
+    updateTimes();
+  }
+
+  function updatePoolActive() {
+    const ended = state.pool.left <= 0;
+    ['pro', 'con'].forEach(k => {
+      const b = document.getElementById('poolSide_' + k);
+      if (!b) return;
+      const on = state.pool.active === k;
+      b.classList.toggle('active', on);
+      b.classList.toggle('inactive', !on);
+      const st = document.getElementById('poolSideStatus_' + k);
+      if (st) st.textContent = ended ? '已结束' : on ? (state.running ? '发言中' : '待开始') : '待命';
+      const nm = document.getElementById('poolSideName_' + k);
+      if (nm) nm.textContent = (k === 'pro' ? state.proName : state.conName) || '';
+    });
+    const sw = document.getElementById('poolSwitch');
+    if (sw) { sw.textContent = '⇄ 换到' + SIDE_LABEL[state.pool.active === 'pro' ? 'con' : 'pro']; sw.disabled = ended; }
+    const st = document.getElementById('poolStart');
+    if (st) {
+      st.textContent = state.running ? '暂停' : (ended ? '已结束' : '开始');
+      st.disabled = ended && !state.running;
+    }
+    const root = document.getElementById('pool');
+    if (root) root.dataset.active = state.pool.active;
+  }
+
+  function updatePoolTimes() {
+    const stg = curStage();
+    const cap = poolTurnCap(stg);
+    const turnEl = document.getElementById('poolTurn');
+    const turn = Math.max(0, state.pool.turn);
+    const warn = state.pool.left > 0 && turn <= 5;
+    if (turnEl) {
+      turnEl.textContent = String(Math.ceil(turn - 1e-6));
+      turnEl.className = 'pool-turn' + (warn ? ' warning' : '') + (state.pool.left <= 0 ? ' overtime' : '');
+    }
+    const tf = document.getElementById('poolTurnFill');
+    if (tf) { tf.style.width = Math.min(100, turn / cap * 100) + '%'; tf.className = 'pool-bar-fill' + (warn ? ' warning' : ''); }
+    const leftTxt = formatTime(Math.ceil(state.pool.left - 1e-6));
+    const l1 = document.getElementById('poolLeft'); if (l1) l1.textContent = leftTxt;
+    const l2 = document.getElementById('poolHeadLeft'); if (l2) l2.textContent = leftTxt;
+    const lf = document.getElementById('poolLeftFill');
+    if (lf) lf.style.width = Math.min(100, Math.max(0, state.pool.left / stg.duration * 100)) + '%';
+  }
+
   function updateTimes() {
     if (curMode() === 'cover') {
       syncCoverFields();
       syncHeaderTopic();
       return;
     }
+    if (curMode() === 'pool') { updatePoolTimes(); return; }
     if (isTimerless(curMode())) return; // vote-pre / vote-final：票数由事件驱动的渲染负责，这里没有计时要同步
     if (curMode() === 'duel') {
       const proEl = document.getElementById('proTime');
@@ -1087,7 +1290,9 @@
     state.lastTick = ts;
 
     let prevWhole;
-    if (curMode() === 'duel') {
+    if (curMode() === 'pool') {
+      tickPool(delta);
+    } else if (curMode() === 'duel') {
       const k = state.duel.active;
       if (state.duel[k] <= 0) {
         // 运行中切到了已归零的一方：不倒扣，按 duelFlow 接续或停下
@@ -1105,6 +1310,30 @@
     updateTimes();
     if (!state.running) { rafId = null; return; }
     rafId = requestAnimationFrame(loop);
+  }
+
+  function tickPool(delta) {
+    const p = state.pool;
+    if (p.left <= 0) { handleTimeUp(); return; }
+    const prevTurn = Math.ceil(p.turn - 1e-6);
+    p.left = Math.max(0, p.left - delta);
+    p.turn = Math.max(0, p.turn - delta);
+    if (p.turn > p.left) p.turn = p.left;
+    if (p.left <= 0) {
+      p.turn = 0;
+      beepEnd(); flashScreen();
+      handleTimeUp();
+      return;
+    }
+    const nowTurn = Math.ceil(p.turn - 1e-6);
+    if (nowTurn !== prevTurn && nowTurn <= 5 && nowTurn > 0) beepTick();
+    if (p.turn <= 0) {
+      // 单次发言到点：自动换边、重置，继续跑
+      beep30();
+      p.active = p.active === 'pro' ? 'con' : 'pro';
+      resetPoolTurn();
+      updatePoolActive();
+    }
   }
 
   function checkBeeps(prev, now, total) {
@@ -1128,6 +1357,14 @@
   }
 
   function handleTimeUp() {
+    if (curMode() === 'pool') {
+      state.running = false;
+      updateStartButton();
+      updatePoolActive();
+      updateTimes();
+      if (state.autoFlow) setTimeout(() => nextStage(), 1200);
+      return;
+    }
     if (curMode() === 'duel') {
       const other = state.duel.active === 'pro' ? 'con' : 'pro';
       if (curDuelFlow() === 'relay' && state.duel[other] > 0) {
@@ -1160,6 +1397,7 @@
 
   /* ---------------- Controls ---------------- */
   function activeRemaining() {
+    if (curMode() === 'pool') return state.pool.left;
     return curMode() === 'duel' ? state.duel[state.duel.active] : state.remaining;
   }
 
@@ -1173,10 +1411,12 @@
     if (state.running && !rafId) rafId = requestAnimationFrame(loop);
     updateStartButton();
     if (curMode() === 'duel') updateDuelActive();
+    if (curMode() === 'pool') updatePoolActive();
   }
 
   // 手机底栏的「切换」：只换发言方。计时中换过去接着跑，暂停时不自动开始
   function switchDuelSide() {
+    if (curMode() === 'pool') { switchPoolSide(); return; }
     if (curMode() !== 'duel') return;
     state.duel.active = state.duel.active === 'pro' ? 'con' : 'pro';
     updateDuelActive();
@@ -1195,6 +1435,12 @@
       state.duel.active = 'pro';
       const rt = getRuntime(curStage().id);
       rt.duelPro = state.duel.pro; rt.duelCon = state.duel.con; rt.duelActive = 'pro';
+    } else if (curMode() === 'pool') {
+      state.pool.left = curDuration();
+      state.pool.active = 'pro';
+      resetPoolTurn();
+      const rt = getRuntime(curStage().id);
+      rt.poolLeft = state.pool.left; rt.poolTurn = state.pool.turn; rt.poolActive = 'pro';
     } else {
       state.remaining = curDuration();
       const rt = getRuntime(curStage().id);
@@ -1202,6 +1448,7 @@
     }
     updateTimes();
     if (curMode() === 'duel') updateDuelActive();
+    if (curMode() === 'pool') updatePoolActive();
   }
 
   function setCurrent(id) {
@@ -1218,6 +1465,10 @@
       state.duel.pro = rt.duelPro;
       state.duel.con = rt.duelCon;
       state.duel.active = rt.duelActive || 'pro';
+    } else if (curMode() === 'pool') {
+      state.pool.left = rt.poolLeft;
+      state.pool.turn = rt.poolTurn;
+      state.pool.active = rt.poolActive || 'pro';
     } else {
       state.remaining = rt.remaining;
     }
@@ -1239,6 +1490,10 @@
       rt.duelPro = state.duel.pro;
       rt.duelCon = state.duel.con;
       rt.duelActive = state.duel.active;
+    } else if (curMode() === 'pool') {
+      rt.poolLeft = state.pool.left;
+      rt.poolTurn = state.pool.turn;
+      rt.poolActive = state.pool.active;
     } else {
       rt.remaining = state.remaining;
     }
@@ -1334,10 +1589,10 @@
         add('stage-panel-name', s.name);
       } else {
         no += 1;
-        total += (Number(s.duration) || 0) * (s.type === 'duel' ? 2 : 1);
+        total += (Number(s.duration) || 0) * stageTotalFactor(s);
         add('stage-panel-no', String(no));
         add('stage-panel-name', s.name);
-        add('stage-panel-meta', (s.type === 'duel' ? '双 ' : '') + formatTime(s.duration));
+        add('stage-panel-meta', (s.type === 'duel' ? '双 ' : s.type === 'pool' ? '共用 ' : '') + formatTime(s.duration));
       }
       list.appendChild(b);
     });
@@ -1386,7 +1641,8 @@
       label.textContent = '\u6682\u505c';
       icon.innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
     } else {
-      label.textContent = state.remaining <= 0 && curMode() !== 'duel' ? '\u5df2\u7ed3\u675f' : '\u5f00\u59cb';
+      const over = curMode() === 'pool' ? state.pool.left <= 0 : (state.remaining <= 0 && curMode() !== 'duel');
+      label.textContent = over ? '\u5df2\u7ed3\u675f' : '\u5f00\u59cb';
       icon.innerHTML = '<polygon points="6 4 20 12 6 20 6 4"/>';
     }
   }
@@ -1446,8 +1702,8 @@
       row.className = 'stage-row';
       row.draggable = !isVote; // 投票环节位置固定，不能拖拽重排
       row.dataset.idx = idx;
-      const typeLabel = isCover ? '\u9996\u9875' : isVote ? '\u6295\u7968' : (stg.type === 'duel' ? '\u53cc' : '\u5355');
-      const typeTitle = isCover ? '\u9996\u9875\u4e0d\u53c2\u4e0e\u8ba1\u65f6' : isVote ? '\u6295\u7968\u73af\u8282\u4e0d\u53c2\u4e0e\u8ba1\u65f6\uff0c\u4f4d\u7f6e\u56fa\u5b9a' : '\u5207\u6362\u7c7b\u578b';
+      const typeLabel = isCover ? '\u9996\u9875' : isVote ? '\u6295\u7968' : (stg.type === 'duel' ? '\u53cc' : stg.type === 'pool' ? '\u5171' : '\u5355');
+      const typeTitle = isCover ? '\u9996\u9875\u4e0d\u53c2\u4e0e\u8ba1\u65f6' : isVote ? '\u6295\u7968\u73af\u8282\u4e0d\u53c2\u4e0e\u8ba1\u65f6\uff0c\u4f4d\u7f6e\u56fa\u5b9a' : stg.type === 'pool' ? ('共用时间池：双方共用总时长，单次发言上限 ' + poolTurnCap(stg) + ' 秒（点击改为单计时）') : '\u5207\u6362\u7c7b\u578b';
       row.innerHTML = `
         <span class="stage-grip">⋮⋮</span>
         <input class="stage-name-input" value="${escapeHtml(stg.name)}" maxlength="10" ${isVote ? 'disabled' : ''}>
@@ -1474,7 +1730,8 @@
       // type toggle
       row.querySelector('.stage-type-pill').addEventListener('click', (e) => {
         if (locked) return;
-        stg.type = stg.type === 'duel' ? 'single' : 'duel';
+        stg.type = stg.type === 'duel' || stg.type === 'pool' ? 'single' : 'duel';
+        delete stg.turn; delete stg.tag;
         delete runtimeCache[stg.id];
         renderStagesList(); renderModeTabs(); updateFlowDots();
         if (stg.id === state.currentId) { resetTimer(); renderStage(); }
@@ -1547,6 +1804,7 @@
     return stages.filter(s => s.type !== 'vote-pre' && s.type !== 'vote-final').map(s => {
       const out = { id: s.id, name: s.name, type: s.type, duration: s.duration };
       if (isDuelFlow(s.duelFlow)) out.duelFlow = s.duelFlow;
+      if (s.type === 'pool') { out.turn = poolTurnCap(s); if (s.tag) out.tag = s.tag; }
       return out;
     });
   }
@@ -1596,7 +1854,7 @@
       const item = document.createElement('div');
       item.className = 'preset-item' + (builtin ? ' preset-item-builtin' : '');
       // 双计时环节正反方各有一份时长，总时长要算两次
-      const totalSeconds = preset.stages.reduce((sum, stg) => sum + (Number(stg.duration) || 0) * (stg.type === 'duel' ? 2 : 1), 0);
+      const totalSeconds = preset.stages.reduce((sum, stg) => sum + (Number(stg.duration) || 0) * stageTotalFactor(stg), 0);
       const tag = builtin ? ' <span class="preset-tag">内置</span>' : '';
       let actions = '<button class="chip preset-chip" data-action="load">套用</button>';
       if (!builtin) {
@@ -1671,6 +1929,7 @@
         name: st.name, type: st.type, duration: st.duration,
       };
       if (isDuelFlow(st.duelFlow)) out.duelFlow = st.duelFlow;
+      if (st.type === 'pool') { out.turn = poolTurnCap(st); if (st.tag) out.tag = String(st.tag).slice(0, 12); }
       return out;
     });
     ensureCoverStage();
@@ -1750,7 +2009,8 @@
 
   function encodeFormat(stages) {
     const rows = stages.filter(s => s.type !== 'cover' && s.type !== 'vote-pre' && s.type !== 'vote-final').map(s => {
-      const row = [s.name, s.type === 'duel' ? 1 : 0, s.duration];
+      const row = [s.name, s.type === 'duel' ? 1 : s.type === 'pool' ? 2 : 0, s.duration];
+      if (s.type === 'pool') { row.push(poolTurnCap(s)); if (s.tag) row.push(String(s.tag)); }
       // 交锋 / 独立写成实际生效的值，对方不依赖按环节名推断也能得到同样的行为
       if (s.type === 'duel') row.push(duelFlowOf(s) === 'solo' ? 1 : 0);
       return row;
@@ -1774,7 +2034,11 @@
         const name = String(row[0] == null ? '' : row[0]).trim().slice(0, 10);
         const duration = Math.round(Number(row[2]));
         if (!name || !isFinite(duration)) return;
-        const st = { name, type: row[1] === 1 ? 'duel' : 'single', duration: Math.min(5999, Math.max(10, duration)) };
+        const st = { name, type: row[1] === 1 ? 'duel' : row[1] === 2 ? 'pool' : 'single', duration: Math.min(5999, Math.max(10, duration)) };
+        if (st.type === 'pool') {
+          st.turn = poolTurnCap({ turn: row[3] });
+          if (typeof row[4] === 'string' && row[4].trim()) st.tag = row[4].trim().slice(0, 12);
+        }
         if (st.type === 'duel' && (row[3] === 0 || row[3] === 1)) st.duelFlow = row[3] === 1 ? 'solo' : 'relay';
         stages.push(st);
       });
@@ -1814,7 +2078,7 @@
   function shareFormat() {
     const stages = state.stages.filter(s => s.type !== 'cover' && s.type !== 'vote-pre' && s.type !== 'vote-final');
     if (!stages.length) { setShareStatus('还没有环节'); return; }
-    const totalSeconds = stages.reduce((sum, stg) => sum + (Number(stg.duration) || 0) * (stg.type === 'duel' ? 2 : 1), 0);
+    const totalSeconds = stages.reduce((sum, stg) => sum + (Number(stg.duration) || 0) * stageTotalFactor(stg), 0);
     const text = '【辩论计时器赛制】' + stages.length + ' 环节 · ' + formatTime(totalSeconds) + '｜' + encodeFormat(stages);
     // 同时填进输入框并选中：万一浏览器不让复制，还能手动 Ctrl+C
     const input = document.getElementById('shareCodeInput');
@@ -2034,6 +2298,12 @@
       else if (e.key.toLowerCase() === 'r') resetTimer();
       else if (e.key === ',' || e.key === '<' || e.key === 'ArrowLeft') { e.preventDefault(); prevStage(); }
       else if (e.key === '.' || e.key === '>' || e.key === 'ArrowRight') { e.preventDefault(); nextStage(); }
+      else if (curMode() === 'pool' && (e.key === '1' || e.key === '2')) {
+        const side = e.key === '1' ? 'pro' : 'con';
+        if (state.pool.active !== side) switchPoolSide(side);
+        if (!state.running) toggleRun();
+      }
+      else if (curMode() === 'pool' && (e.key.toLowerCase() === 's' || e.key === 'Enter')) { e.preventDefault(); switchPoolSide(); }
       else if (e.key === '1' && curMode() === 'duel') {
         state.duel.active = 'pro';
         if (!state.running) toggleRun();
@@ -2081,6 +2351,10 @@
   } else if (curMode() === 'duel') {
     state.duel.pro = curDuration();
     state.duel.con = curDuration();
+  } else if (curMode() === 'pool') {
+    state.pool.left = curDuration();
+    state.pool.active = 'pro';
+    resetPoolTurn();
   } else {
     state.remaining = curDuration();
   }
