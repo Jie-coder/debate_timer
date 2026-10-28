@@ -2150,6 +2150,7 @@
     document.getElementById('swTick').classList.toggle('on', state.tick);
     const pct = Math.round(clampVolume(state.volume) * 100);
     document.getElementById('volumeRange').value = pct;
+    document.getElementById('volumeRange').style.setProperty('--val', pct + '%');
     document.getElementById('volumeValue').textContent = pct + '%';
     document.getElementById('swAutoFlow').classList.toggle('on', state.autoFlow);
     document.getElementById('swVoteEnabled').classList.toggle('on', state.voteEnabled);
@@ -2263,6 +2264,7 @@
     volumeRange.addEventListener('input', (e) => {
       state.volume = clampVolume(Number(e.target.value) / 100);
       document.getElementById('volumeValue').textContent = Math.round(state.volume * 100) + '%';
+      e.target.style.setProperty('--val', Math.round(state.volume * 100) + '%');
       saveState();
     });
     // 松手时响一声，直接听到当前音量

@@ -4820,7 +4820,7 @@ html body[data-theme] .pool-compact .pool-actions { grid-area: act; }
    字体经 index.html / vote.html 的 Google Fonts <link> 载入（display=swap）；离线单文件
    拿不到时自动回落到系统楷体 / Impact / 雅黑。结构规则与电视转播共用（上方 broadcast,poster
    选择器），这里只写海报自己的覆盖；:root 提高一级优先级以压过共用规则。 */
-.chip[data-theme="poster"] { background: linear-gradient(118deg, #0a1a5a 0 50%, #5a0a1c 50% 100%) !important; color: #fff !important; border-color: #fff !important; font-family: "Ma Shan Zheng", "STXingkai", "KaiTi", serif !important; font-size: 1.15em !important; }
+.chip[data-theme="poster"] { background: linear-gradient(118deg, #0a1a5a 0 50%, #5a0a1c 50% 100%) !important; color: #fff !important; border-color: #fff !important; }
 
 html:root body[data-theme="poster"] {
   --pp-blue: #1d4dff; --pp-blue-deep: #0a1f6b; --pp-red: #d7192f; --pp-red-deep: #5e0b16;
@@ -4903,6 +4903,116 @@ html:root body[data-theme="poster"] .pool-side:not(.active) { opacity: 0.85; fil
 html:root body[data-theme="poster"] .pool-side:not(.active)[data-side="pro"] { background: linear-gradient(135deg, rgba(29,77,255,.28), rgba(10,31,107,.45)); }
 html:root body[data-theme="poster"] .pool-side:not(.active)[data-side="con"] { background: linear-gradient(135deg, rgba(215,25,47,.28), rgba(94,11,22,.45)); }
 html:root body[data-theme="poster"] .pool-side:not(.active) .pool-side-label { color: #fff; text-shadow: 0 1px 0 rgba(0,0,0,.5); }
+/* 抽屉 / 投票面板等浮层：海报主题的 --vf-paper 是透明的（让背景渐变透出来），浮层必须改成实色 */
+html:root body[data-theme="poster"] .drawer {
+  background: linear-gradient(165deg, #0a1446 0%, #0d0f33 45%, #24071a 80%, #2b050d 100%) !important;
+  background-color: #0b0f33 !important;
+  border-left: 2px solid rgba(255, 255, 255, 0.45) !important;
+  box-shadow: -18px 0 48px rgba(0, 0, 0, 0.6) !important;
+  isolation: isolate;
+}
+
+html:root body[data-theme="poster"] .preset-new-btn { color: #0b0f33 !important; }
+html:root body[data-theme="poster"] .switch { border-color: rgba(255,255,255,.55) !important; }
+html:root body[data-theme="poster"] .switch::after { background: #fff !important; }
+html:root body[data-theme="poster"] .switch.on { background: linear-gradient(100deg, #1d4dff 50%, #d7192f 50%) !important; }
+
+/* ================= 滚动条 + 滑杆（input[type=range]），7 套主题各一套 =================
+   通用结构读 --sb-* / --rg-* 变量，每套主题只定义变量（个别主题再补一两条）。
+   滑杆填充：WebKit 用 --val（app.js 随值更新）画渐变，Firefox 用 ::-moz-range-progress。 */
+html body[data-theme] {
+  --sb-w: 10px; --sb-track: transparent; --sb-thumb: rgba(127,127,127,.45); --sb-thumb-hover: rgba(127,127,127,.7);
+  --sb-radius: 999px; --sb-border: 2px solid transparent;
+  --rg-h: 6px; --rg-radius: 999px; --rg-track: rgba(127,127,127,.25); --rg-fill: linear-gradient(var(--vf-ink), var(--vf-ink));
+  --rg-thumb: var(--vf-ink); --rg-thumb-size: 16px; --rg-thumb-radius: 50%; --rg-thumb-border: 0 solid transparent;
+  --rg-thumb-shadow: none; --rg-track-border: 0 solid transparent;
+}
+html body[data-theme="neo"] {
+  --sb-w: 14px; --sb-track: #fffdf4; --sb-thumb: #ffe600; --sb-thumb-hover: #ffd000; --sb-radius: 0; --sb-border: 2px solid #000;
+  --rg-h: 12px; --rg-radius: 0; --rg-track: #fff; --rg-fill: linear-gradient(#ffe600, #ffe600); --rg-track-border: 2px solid #000;
+  --rg-thumb: #fff; --rg-thumb-size: 22px; --rg-thumb-radius: 0; --rg-thumb-border: 3px solid #000; --rg-thumb-shadow: 3px 3px 0 #000;
+}
+html body[data-theme="arena"] {
+  --sb-w: 8px; --sb-track: rgba(76,141,255,.06); --sb-thumb: linear-gradient(#4c8dff, #2a5bd7); --sb-thumb-hover: #7fb0ff; --sb-radius: 999px;
+  --rg-h: 4px; --rg-track: rgba(127,176,255,.2); --rg-fill: linear-gradient(#4c8dff, #4c8dff);
+  --rg-thumb: #0b1020; --rg-thumb-size: 16px; --rg-thumb-border: 2px solid #7fb0ff; --rg-thumb-shadow: 0 0 10px rgba(76,141,255,.8);
+}
+html body[data-theme="academy"] {
+  --sb-w: 10px; --sb-track: #efe7d6; --sb-thumb: #b08d57; --sb-thumb-hover: #7a1f2b; --sb-radius: 999px; --sb-border: 2px solid #efe7d6;
+  --rg-h: 3px; --rg-track: #d9ccb0; --rg-fill: linear-gradient(#7a1f2b, #7a1f2b);
+  --rg-thumb: #f6f1e7; --rg-thumb-size: 18px; --rg-thumb-border: 2px solid #7a1f2b; --rg-thumb-shadow: 0 1px 3px rgba(122,31,43,.35);
+}
+html body[data-theme="soft"] {
+  --sb-w: 10px; --sb-track: transparent; --sb-thumb: #c9cffc; --sb-thumb-hover: #8c99ff; --sb-radius: 999px; --sb-border: 3px solid transparent;
+  --rg-h: 8px; --rg-track: #e3e6ff; --rg-fill: linear-gradient(90deg, #8c99ff, #5468ff);
+  --rg-thumb: #fff; --rg-thumb-size: 20px; --rg-thumb-shadow: 0 2px 8px rgba(84,104,255,.35), 0 0 0 1px #d6dbff;
+}
+html body[data-theme="broadcast"] {
+  --sb-w: 12px; --sb-track: #000; --sb-thumb: #ffd400; --sb-thumb-hover: #fff; --sb-radius: 0; --sb-border: 3px solid #000;
+  --rg-h: 8px; --rg-radius: 0; --rg-track: #333; --rg-fill: linear-gradient(90deg, #1f5fe0, #e23a2e);
+  --rg-thumb: #ffd400; --rg-thumb-size: 20px; --rg-thumb-radius: 0; --rg-thumb-border: 2px solid #000;
+}
+html body[data-theme="terminal"] {
+  --sb-w: 12px; --sb-track: #020402; --sb-thumb: #1c5c34; --sb-thumb-hover: #39ff88; --sb-radius: 0; --sb-border: 2px solid #020402;
+  --rg-h: 10px; --rg-radius: 0; --rg-track: #0a150c; --rg-track-border: 1px solid #1c5c34;
+  --rg-fill: repeating-linear-gradient(90deg, #39ff88 0 6px, transparent 6px 8px);
+  --rg-thumb: #39ff88; --rg-thumb-size: 12px; --rg-thumb-radius: 0; --rg-thumb-shadow: 0 0 8px rgba(57,255,136,.7);
+}
+html body[data-theme="poster"] {
+  --sb-w: 10px; --sb-track: rgba(255,255,255,.04); --sb-thumb: linear-gradient(#1d4dff, #d7192f); --sb-thumb-hover: linear-gradient(#4a72ff, #ff3048); --sb-radius: 999px; --sb-border: 2px solid transparent;
+  --rg-h: 6px; --rg-track: rgba(255,255,255,.16); --rg-fill: linear-gradient(90deg, #1d4dff, #d7192f);
+  --rg-thumb: #fff; --rg-thumb-size: 18px; --rg-thumb-shadow: 0 0 12px rgba(255,255,255,.8), 0 0 22px rgba(215,25,47,.6);
+}
+/* Firefox / 标准：scrollbar-color 只认纯色，渐变主题取主色 */
+html body[data-theme], html body[data-theme] * { scrollbar-width: thin; scrollbar-color: rgba(127,127,127,.5) transparent; }
+html body[data-theme="neo"], html body[data-theme="neo"] * { scrollbar-width: auto; scrollbar-color: #000 #fffdf4; }
+html body[data-theme="arena"], html body[data-theme="arena"] * { scrollbar-color: #4c8dff transparent; }
+html body[data-theme="academy"], html body[data-theme="academy"] * { scrollbar-color: #b08d57 #efe7d6; }
+html body[data-theme="soft"], html body[data-theme="soft"] * { scrollbar-color: #c9cffc transparent; }
+html body[data-theme="broadcast"], html body[data-theme="broadcast"] * { scrollbar-color: #ffd400 #000; }
+html body[data-theme="terminal"], html body[data-theme="terminal"] * { scrollbar-color: #39ff88 #020402; }
+html body[data-theme="poster"], html body[data-theme="poster"] * { scrollbar-color: #d7192f rgba(255,255,255,.06); }
+html body[data-theme] .mode-tabs { scrollbar-width: none; }
+@supports selector(::-webkit-scrollbar) {
+  html body[data-theme], html body[data-theme] * { scrollbar-width: auto; scrollbar-color: auto; }
+  html body[data-theme] .mode-tabs { scrollbar-width: none; }
+}
+html body[data-theme] ::-webkit-scrollbar { width: var(--sb-w); height: var(--sb-w); }
+html body[data-theme] ::-webkit-scrollbar-track { background: var(--sb-track); }
+html body[data-theme] ::-webkit-scrollbar-thumb { background: var(--sb-thumb); border-radius: var(--sb-radius); border: var(--sb-border); background-clip: padding-box; }
+html body[data-theme] ::-webkit-scrollbar-thumb:hover { background: var(--sb-thumb-hover); background-clip: padding-box; }
+html body[data-theme] ::-webkit-scrollbar-corner { background: transparent; }
+html body[data-theme="neo"] ::-webkit-scrollbar-track { border-left: 2px solid #000; }
+html body[data-theme="neo"] ::-webkit-scrollbar-thumb { background-clip: border-box; box-shadow: inset -2px -2px 0 rgba(0,0,0,.25); }
+html body[data-theme="terminal"] ::-webkit-scrollbar-thumb { box-shadow: 0 0 6px rgba(57,255,136,.5); }
+html body[data-theme="poster"] ::-webkit-scrollbar-thumb { box-shadow: 0 0 8px rgba(255,255,255,.35); }
+html body[data-theme] .mode-tabs::-webkit-scrollbar { display: none; }
+
+html body[data-theme] input[type="range"] {
+  -webkit-appearance: none; appearance: none; background: transparent; accent-color: auto;
+  height: calc(var(--rg-thumb-size) + 8px); margin: 0; cursor: pointer; --val: 100%;
+}
+html body[data-theme] input[type="range"]:focus { outline: none; }
+html body[data-theme] input[type="range"]:focus-visible { outline: 2px solid var(--vf-ink); outline-offset: 3px; }
+html body[data-theme] input[type="range"]::-webkit-slider-runnable-track {
+  height: var(--rg-h); border-radius: var(--rg-radius); border: var(--rg-track-border); box-sizing: content-box;
+  background: var(--rg-fill) 0 0 / var(--val) 100% no-repeat, var(--rg-track);
+}
+html body[data-theme] input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: var(--rg-thumb-size); height: var(--rg-thumb-size);
+  margin-top: calc((var(--rg-h) - var(--rg-thumb-size)) / 2); border-radius: var(--rg-thumb-radius);
+  background: var(--rg-thumb); border: var(--rg-thumb-border); box-shadow: var(--rg-thumb-shadow); box-sizing: border-box;
+}
+html body[data-theme="neo"] input[type="range"]::-webkit-slider-thumb,
+html body[data-theme="terminal"] input[type="range"]::-webkit-slider-thumb { margin-top: calc((var(--rg-h) - var(--rg-thumb-size)) / 2 - 1px); }
+html body[data-theme="neo"] input[type="range"]::-webkit-slider-thumb { margin-top: calc((var(--rg-h) - var(--rg-thumb-size)) / 2 - 2px); }
+html body[data-theme] input[type="range"]::-moz-range-track { height: var(--rg-h); border-radius: var(--rg-radius); border: var(--rg-track-border); background: var(--rg-track); }
+html body[data-theme] input[type="range"]::-moz-range-progress { height: var(--rg-h); border-radius: var(--rg-radius); background: var(--rg-fill); }
+html body[data-theme] input[type="range"]::-moz-range-thumb {
+  width: var(--rg-thumb-size); height: var(--rg-thumb-size); border-radius: var(--rg-thumb-radius);
+  background: var(--rg-thumb); border: var(--rg-thumb-border); box-shadow: var(--rg-thumb-shadow); box-sizing: border-box;
+}
+html:root body[data-theme="poster"] .switch:not(.on) { border: 2px solid rgba(255,255,255,.55) !important; background: rgba(255,255,255,.08) !important; }
 
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
@@ -8154,6 +8264,7 @@ html:root body[data-theme="poster"] .pool-side:not(.active) .pool-side-label { c
     document.getElementById('swTick').classList.toggle('on', state.tick);
     const pct = Math.round(clampVolume(state.volume) * 100);
     document.getElementById('volumeRange').value = pct;
+    document.getElementById('volumeRange').style.setProperty('--val', pct + '%');
     document.getElementById('volumeValue').textContent = pct + '%';
     document.getElementById('swAutoFlow').classList.toggle('on', state.autoFlow);
     document.getElementById('swVoteEnabled').classList.toggle('on', state.voteEnabled);
@@ -8267,6 +8378,7 @@ html:root body[data-theme="poster"] .pool-side:not(.active) .pool-side-label { c
     volumeRange.addEventListener('input', (e) => {
       state.volume = clampVolume(Number(e.target.value) / 100);
       document.getElementById('volumeValue').textContent = Math.round(state.volume * 100) + '%';
+      e.target.style.setProperty('--val', Math.round(state.volume * 100) + '%');
       saveState();
     });
     // 松手时响一声，直接听到当前音量
