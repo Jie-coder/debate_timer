@@ -1995,7 +1995,7 @@
 
   /* ---------------- Share format (分享赛制) ----------------
      只带环节（名称 / 单双计时 / 时长 / 交锋独立），不带主题、背景、辩题和队伍。
-     复制出去的文本形如「【辩论计时器赛制】11 环节 · 32:00｜DT1.xxxx」，导入时只认其中的
+     复制出去的文本形如「【Jie's Debate Timer 赛制】11 环节 · 32:00｜DT1.xxxx」，导入时只认其中的
      DT1.xxxx，所以连同聊天里的其他文字一起粘贴也能识别。 */
   const SHARE_PREFIX = 'DT1.';
   const SHARE_MAX_STAGES = 40;
@@ -2072,7 +2072,7 @@
     const stages = state.stages.filter(s => s.type !== 'cover' && s.type !== 'vote-pre' && s.type !== 'vote-final');
     if (!stages.length) { setShareStatus('还没有环节'); return; }
     const totalSeconds = stages.reduce((sum, stg) => sum + (Number(stg.duration) || 0) * stageTotalFactor(stg), 0);
-    const text = '【辩论计时器赛制】' + stages.length + ' 环节 · ' + formatTime(totalSeconds) + '｜' + encodeFormat(stages);
+    const text = '【Jie\'s Debate Timer 赛制】' + stages.length + ' 环节 · ' + formatTime(totalSeconds) + '｜' + encodeFormat(stages);
     // 同时填进输入框并选中：万一浏览器不让复制，还能手动 Ctrl+C
     const input = document.getElementById('shareCodeInput');
     if (input) { input.value = text; input.select(); }
