@@ -4800,7 +4800,7 @@ html body[data-theme] .pool-compact .pool-left-row { grid-area: left; }
 html body[data-theme] .pool-compact .pool-bar-left { grid-area: lbar; }
 html body[data-theme] .pool-compact .pool-actions { grid-area: act; }
 
-/* ================= 7 · 海报对决 Poster =================
+/* ================= 7 · 红蓝对决 Poster =================
    灵感来自「工辩表演赛」海报：深电光蓝 vs 深绯红、藏青→酒红斜切渐变 + 烟雾光晕，
    标题用毛笔字（Ma Shan Zheng，SIL OFL 1.1），数字 Oswald，正文 Noto Sans SC。
    字体经 index.html / vote.html 的 Google Fonts <link> 载入（display=swap）；离线单文件
