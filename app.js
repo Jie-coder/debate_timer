@@ -990,7 +990,7 @@
           <div class="duel-side">
             <div class="duel-side-label" aria-hidden="true"></div>
             <div class="duel-side-name" id="conNameEl">\u53cd\u65b9</div>
-            <div class="duel-status">待命</div>
+            <div class="duel-status"></div>
           </div>
           <div class="duel-time editable-time" id="conTime" data-target="con">${formatTime(state.duel.con)}</div>
           <button class="duel-reset-btn" id="btnResetCon" title="重置反方">
@@ -1050,11 +1050,11 @@
     const otherEl = activeSide === 'pro' ? con : pro;
     activeEl.classList.add('active'); activeEl.classList.remove('inactive');
     otherEl.classList.add('inactive'); otherEl.classList.remove('active');
-    // 「计时中」不再显示（大字和高亮已经说明是谁在讲），只保留 已结束 / 暂停中 / 待命
+    // 「计时中」不再显示（大字和高亮已经说明是谁在讲），「待命」也不显示，只保留 已结束 / 暂停中
     activeEl.querySelector('.duel-status').textContent =
       state.duel[activeSide] <= 0 ? '已结束' : '';
     otherEl.querySelector('.duel-status').textContent =
-      state.duel[otherSide] <= 0 ? '已结束' : (state.running ? '暂停中' : '待命');
+      state.duel[otherSide] <= 0 ? '已结束' : (state.running ? '暂停中' : '');
   }
 
   /* ---------------- 共用时间池（雅哲杯自由辩论） ---------------- */
