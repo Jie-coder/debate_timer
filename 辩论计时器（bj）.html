@@ -7185,11 +7185,7 @@ html body[data-theme] .duel-status:empty { visibility: hidden !important; backgr
     const otherEl = activeSide === 'pro' ? con : pro;
     activeEl.classList.add('active'); activeEl.classList.remove('inactive');
     otherEl.classList.add('inactive'); otherEl.classList.remove('active');
-    // 「计时中」不再显示（大字和高亮已经说明是谁在讲），「待命」也不显示，只保留 已结束 / 暂停中
-    activeEl.querySelector('.duel-status').textContent =
-      state.duel[activeSide] <= 0 ? '已结束' : '';
-    otherEl.querySelector('.duel-status').textContent =
-      state.duel[otherSide] <= 0 ? '已结束' : (state.running ? '暂停中' : '');
+    // 双计时不显示任何小字状态（计时中 / 待命 / 暂停中 / 已结束）；.duel-status 留空只占格子让大字居中
   }
 
   /* ---------------- 共用时间池（雅哲杯自由辩论） ---------------- */

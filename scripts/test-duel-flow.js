@@ -214,7 +214,7 @@ check('flow pill visible on duel stages', rowNamed('对辩').querySelector('.sta
   check('solo: loop stopped at zero (s)', ran <= 11, true);
   check('solo: 正方 hit zero', z(s.pro), '00:00');
   check('solo: 反方 untouched', s.con, '00:10');
-  check('solo: 正方 shows 已结束', s.proStatus, '已结束');
+  check('solo: 正方 shows no small status text', s.proStatus, '');
   check('solo: start button back to 开始', s.startLabel, '开始');
   // now hand the clock to 反方 manually
   key('2');
@@ -240,7 +240,7 @@ check('flow pill visible on duel stages', rowNamed('对辩').querySelector('.sta
   advance(10);
   const s2 = duelSnapshot();
   check('relay: both exhausted -> stop', [z(s2.pro), z(s2.con), s2.startLabel], ['00:00', '00:00', '开始']);
-  check('relay: both sides show 已结束', [s2.proStatus, s2.conStatus], ['已结束', '已结束']);
+  check('relay: both sides show no small status text', [s2.proStatus, s2.conStatus], ['', '']);
 }
 
 /* ---- 6. time up means stopped: no overtime, no restart past zero ---- */
