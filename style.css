@@ -5013,3 +5013,10 @@ html:root body[data-theme="broadcast"] .switch:not(.on) { border: 2px solid #ffd
 html:root body[data-theme="broadcast"] .switch:not(.on)::after { background: #888 !important; }
 html:root body[data-theme="terminal"] .switch:not(.on) { border: 1px solid #39ff88 !important; background: rgba(57,255,136,.06) !important; }
 html:root body[data-theme="terminal"] .switch:not(.on)::after { background: #1f7a45 !important; border-radius: 0 !important; }
+
+/* 红蓝对决：去掉顶栏下方和底栏上方的两条横线（2026-10-29） */
+html:root body[data-theme="poster"] header { border-bottom: 0 !important; box-shadow: none !important; }
+html:root body[data-theme="poster"] footer { border-top: 0 !important; }
+/* 双计时：「A · 正方」标签和「计时中」已移除，空位只占格子保持大字居中，不显示底色 */
+html body[data-theme] .duel-side-label:empty,
+html body[data-theme] .duel-status:empty { visibility: hidden !important; background: none !important; padding: 0 !important; }

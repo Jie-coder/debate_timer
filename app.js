@@ -250,6 +250,8 @@
       if (typeof state.matchStage !== 'string') state.matchStage = '2026 \u534e\u4e2d\u676f \u521d\u8d5b';
       state.volume = clampVolume(state.volume);
       state.voteEnabled = !!state.voteEnabled;
+      // 首页不再填立场：旧存档里的立场清空，投票图回落到 正方 / 反方
+      state.proStance = ''; state.conStance = '';
       if (!Array.isArray(state.stages) || state.stages.length === 0) {
         state.stages = DEFAULT_STAGES.map(x => ({...x}));
         state.currentId = state.stages[0].id;
@@ -466,13 +468,11 @@
           '<label class="cover-team cover-team-pro" for="coverProSchool">' +
             '<span class="cover-team-tag">\u6b63\u65b9</span>' +
             '<input id="coverProSchool" class="cover-input cover-team-name" maxlength="32" value="' + escapeHtml(state.proName || '') + '" placeholder="\u6b63\u65b9\u5b66\u6821">' +
-            '<input id="coverProStance" class="cover-input cover-team-stance" maxlength="40" value="' + escapeHtml(state.proStance || '') + '" placeholder="\u6b63\u65b9\u7acb\u573a\uff08\u9009\u586b\uff09">' +
           '</label>' +
           '<div class="cover-vs" aria-hidden="true">VS</div>' +
           '<label class="cover-team cover-team-con" for="coverConSchool">' +
             '<span class="cover-team-tag">\u53cd\u65b9</span>' +
             '<input id="coverConSchool" class="cover-input cover-team-name" maxlength="32" value="' + escapeHtml(state.conName || '') + '" placeholder="\u53cd\u65b9\u5b66\u6821">' +
-            '<input id="coverConStance" class="cover-input cover-team-stance" maxlength="40" value="' + escapeHtml(state.conStance || '') + '" placeholder="\u53cd\u65b9\u7acb\u573a\uff08\u9009\u586b\uff09">' +
           '</label>' +
         '</div>' +
       '</section>';
@@ -831,8 +831,6 @@
     setFieldValue('coverTopic', state.topic || '');
     setFieldValue('coverProSchool', state.proName || '');
     setFieldValue('coverConSchool', state.conName || '');
-    setFieldValue('coverProStance', state.proStance || '');
-    setFieldValue('coverConStance', state.conStance || '');
     fitCoverTeamNames();
     fitCoverTopic();
   }
@@ -856,8 +854,6 @@
     // updateTimes() 在首页会走 syncCoverFields()，顺带重新适配队名字号
     bind('coverProSchool', 'proName', 32, () => { updateTimes(); applyInputs(); });
     bind('coverConSchool', 'conName', 32, () => { updateTimes(); applyInputs(); });
-    bind('coverProStance', 'proStance', 40);
-    bind('coverConStance', 'conStance', 40);
   }
 
   
@@ -979,9 +975,9 @@
       <div class="duel" id="duel">
         <div class="duel-panel active" data-side="pro" id="panelPro">
           <div class="duel-side">
-            <div class="duel-side-label">A · 正方</div>
+            <div class="duel-side-label" aria-hidden="true"></div>
             <div class="duel-side-name" id="proNameEl">\u6b63\u65b9</div>
-            <div class="duel-status">计时中</div>
+            <div class="duel-status"></div>
           </div>
           <div class="duel-time editable-time" id="proTime" data-target="pro">${formatTime(state.duel.pro)}</div>
           <button class="duel-reset-btn" id="btnResetPro" title="重置正方">
@@ -992,7 +988,7 @@
         </div>
         <div class="duel-panel inactive" data-side="con" id="panelCon">
           <div class="duel-side">
-            <div class="duel-side-label">B · 反方</div>
+            <div class="duel-side-label" aria-hidden="true"></div>
             <div class="duel-side-name" id="conNameEl">\u53cd\u65b9</div>
             <div class="duel-status">待命</div>
           </div>
@@ -1054,8 +1050,9 @@
     const otherEl = activeSide === 'pro' ? con : pro;
     activeEl.classList.add('active'); activeEl.classList.remove('inactive');
     otherEl.classList.add('inactive'); otherEl.classList.remove('active');
+    // 「计时中」不再显示（大字和高亮已经说明是谁在讲），只保留 已结束 / 暂停中 / 待命
     activeEl.querySelector('.duel-status').textContent =
-      state.duel[activeSide] <= 0 ? '已结束' : '计时中';
+      state.duel[activeSide] <= 0 ? '已结束' : '';
     otherEl.querySelector('.duel-status').textContent =
       state.duel[otherSide] <= 0 ? '已结束' : (state.running ? '暂停中' : '待命');
   }
