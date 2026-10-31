@@ -1144,16 +1144,25 @@
     const st = pool.parentElement;
     const avail = st.clientHeight - Math.max(14, st.clientHeight * 0.035) * 2;
     if (avail <= 0) return;
-    pool.classList.remove('pool-compact');
-    const fsStack = fitPoolMode(pool, avail);
-    // 竖排要把 25 秒数字缩到原来的 70% 以下才放得下时，改用侧框在两边的紧凑布局
-    const natural = Math.min(400, Math.max(88, Math.min(innerHeight * 0.31, innerWidth * 0.24)));
-    if (fsStack < natural * 0.7 && innerWidth > 640) {
+    // 横屏电脑：固定用两侧布局，字号按舞台高度算，不同屏幕比例一致；竖屏 / 手机仍用竖排
+    if (innerWidth > 640 && innerWidth >= innerHeight) {
       pool.classList.add('pool-compact');
-      const fsCompact = fitPoolMode(pool, avail);
-      if (fsCompact <= fsStack) { pool.classList.remove('pool-compact'); fitPoolMode(pool, avail); }
+      fitPoolMode(pool, avail);
+    } else {
+      pool.classList.remove('pool-compact');
+      fitPoolMode(pool, avail);
     }
   }
+  // 顶栏 / 底栏按屏幕等比缩放（CSS 用 --ui-z）；标题（.brand）缩小时反向抵消，保证标题不变小
+  function updateUiScale() {
+    if (typeof window === 'undefined' || typeof window.innerWidth !== 'number') return;
+    const z = Math.max(0.8, Math.min(1.5, Math.min(window.innerWidth / 1920, window.innerHeight / 1080)));
+    const root = document.documentElement;
+    root.style.setProperty('--ui-z', z.toFixed(3));
+    root.style.setProperty('--ui-z-brand', z < 1 ? (1 / z).toFixed(3) : '1');
+  }
+  updateUiScale();
+  if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', updateUiScale);
   if (typeof ResizeObserver !== 'undefined') {
     let poolFitRaf = 0;
     const ro = new ResizeObserver(() => { cancelAnimationFrame(poolFitRaf); poolFitRaf = requestAnimationFrame(fitPool); });

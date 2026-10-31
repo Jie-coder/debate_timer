@@ -4799,6 +4799,18 @@ html body[data-theme] .pool-compact .pool-bar-turn { grid-area: tbar; }
 html body[data-theme] .pool-compact .pool-left-row { grid-area: left; }
 html body[data-theme] .pool-compact .pool-bar-left { grid-area: lbar; }
 html body[data-theme] .pool-compact .pool-actions { grid-area: act; }
+/* 2026-10-31 雅哲杯自由辩论：横屏一律两侧布局，25 秒数字放大，宽度全部按视窗比例，
+   不同屏幕大小比例一致（具体字号由 fitPool() 按舞台高度算出写入 --pt） */
+html body[data-theme] .pool.pool-compact .pool-turn { font-size: var(--pt, clamp(120px, min(36vh, 30vw), 900px)); line-height: 0.85; }
+html body[data-theme] .pool.pool-compact .pool-side[data-side] { width: clamp(150px, 17vw, 520px); }
+html body[data-theme] .pool.pool-compact .pool-side .pool-side-label { font-size: calc(clamp(22px, 5.2vh, 80px) * var(--pf, 1)); }
+html body[data-theme] .pool.pool-compact .pool-head { width: min(64vw, 100%); font-size: calc(clamp(16px, 2.8vh, 44px) * (0.5 + var(--pf, 1) / 2)); }
+html body[data-theme] .pool.pool-compact .pool-turn-meta,
+html body[data-theme] .pool.pool-compact .pool-bar-turn { width: min(56vw, 92%); }
+html body[data-theme] .pool.pool-compact .pool-bar-left { width: min(44vw, 80%); }
+html body[data-theme] .pool.pool-compact .pool-turn-meta { font-size: clamp(12px, 2vh, 32px); }
+html body[data-theme] .pool.pool-compact .pool-left-row { font-size: calc(clamp(16px, 3vh, 48px) * (0.5 + var(--pf, 1) / 2)); }
+html body[data-theme] .pool.pool-compact .pool-btn { font-size: calc(clamp(14px, 2.2vh, 32px) * (0.6 + var(--pf, 1) * 0.4)); }
 
 /* ================= 7 · 红蓝对决 Poster =================
    灵感来自「工辩表演赛」海报：深电光蓝 vs 深绯红、藏青→酒红斜切渐变 + 烟雾光晕，
@@ -5020,3 +5032,15 @@ html:root body[data-theme="poster"] footer { border-top: 0 !important; }
 /* 双计时：「A · 正方」标签和「计时中」已移除，空位只占格子保持大字居中，不显示底色 */
 html body[data-theme] .duel-side-label:empty,
 html body[data-theme] .duel-status:empty { visibility: hidden !important; background: none !important; padding: 0 !important; }
+
+/* 2026-10-31 屏幕比例：电脑横屏时顶栏 / 底栏按屏幕大小等比缩放（以 1920×1080 为基准，
+   0.8–1.5 倍，见 app.js updateUiScale），让计时区在不同屏幕上占的比例一致；标题不缩小 */
+@media (min-width: 900px) and (orientation: landscape) {
+  html body[data-theme] header,
+  html body[data-theme] footer { zoom: var(--ui-z, 1); }
+  html body[data-theme] header .brand { zoom: var(--ui-z-brand, 1); }
+}
+@media (min-width: 900px) and (orientation: landscape) {
+  /* 自由辩论：上下留白跟屏幕高度走（1080p 不变，矮屏少留白），把空间让给 25 秒数字 */
+  html body[data-theme][data-screen="pool"] main { padding-top: clamp(12px, 4.4vh, 48px) !important; padding-bottom: clamp(12px, 4.4vh, 48px) !important; }
+}
