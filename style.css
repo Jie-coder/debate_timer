@@ -4802,7 +4802,7 @@ html body[data-theme] .pool-compact .pool-actions { grid-area: act; }
 /* 2026-10-31 雅哲杯自由辩论：横屏一律两侧布局，25 秒数字放大，宽度全部按视窗比例，
    不同屏幕大小比例一致（具体字号由 fitPool() 按舞台高度算出写入 --pt） */
 html body[data-theme] .pool.pool-compact .pool-turn { font-size: var(--pt, clamp(120px, min(36vh, 30vw), 900px)); line-height: 0.85; }
-html body[data-theme] .pool.pool-compact .pool-side[data-side] { width: clamp(150px, 17vw, 520px); }
+html body[data-theme] .pool.pool-compact .pool-side[data-side] { width: calc(clamp(150px, 17vw, 520px) * var(--sw, 1)); }
 html body[data-theme] .pool.pool-compact .pool-side .pool-side-label { font-size: calc(clamp(22px, 5.2vh, 80px) * var(--pf, 1)); }
 html body[data-theme] .pool.pool-compact .pool-head { width: min(64vw, 100%); font-size: calc(clamp(16px, 2.8vh, 44px) * (0.5 + var(--pf, 1) / 2)); }
 html body[data-theme] .pool.pool-compact .pool-turn-meta,

@@ -1150,31 +1150,45 @@
     const t = document.getElementById('poolTurn'); if (!t) return false;
     const a = t.getBoundingClientRect(), st = pool.parentElement.getBoundingClientRect();
     if (a.left < st.left - 1 || a.right > st.right + 1) return true;
+    if ([...pool.querySelectorAll('.pool-side')].some(e => { const r = e.getBoundingClientRect(); return r.width > 0 && (r.left < st.left - 1 || r.right > st.right + 1); })) return true;
     return [...pool.querySelectorAll(':scope > *, :scope > .pool-sides > *')].some(k => {
       if (k === t || k.classList.contains('pool-sides') || k.offsetParent === null) return false;
       const b = k.getBoundingClientRect();
-      return b.width > 0 && b.height > 0 && a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
+      const g = k.classList.contains('pool-side') ? 8 : 0; // 和正方/反方框至少留一点空隙
+      return b.width > 0 && b.height > 0 && a.left < b.right + g && a.right > b.left - g && a.top < b.bottom - 1 && a.bottom > b.top + 1;
     });
+  }
+  // 在给定目标字号、间距下限、侧框宽度系数下，缩到刚好放得下（不溢出、不重叠），返回实际字号
+  function poolTryFit(pool, avail, fsTarget, pfMin, sw) {
+    const bad = () => poolNeeded(pool) > avail || poolTurnCollides(pool);
+    pool.style.setProperty('--sw', sw.toFixed(3));
+    pool.style.removeProperty('--pf');
+    let fs = Math.max(40, fsTarget), pf = 1, guard = 160;
+    pool.style.setProperty('--pt', fs.toFixed(1) + 'px');
+    while (bad() && pf > pfMin) { pf = Math.max(pfMin, pf - 0.05); pool.style.setProperty('--pf', pf.toFixed(2)); }
+    while (bad() && fs > 40 && guard--) { fs = Math.max(40, fs * 0.985); pool.style.setProperty('--pt', fs.toFixed(1) + 'px'); }
+    return fs;
   }
   function fitPoolMode(pool, avail) {
     pool.style.removeProperty('--pf');
     pool.style.removeProperty('--pt');
-    let pf = 1;
-    while (poolNeeded(pool) > avail && pf > 0.4) {
-      pf = Math.max(0.4, pf - 0.05);
-      pool.style.setProperty('--pf', pf.toFixed(2));
-    }
-    // 先按「屏幕高 55% / 宽 30%」× 拉杆倍数设目标字号，再缩到刚好放得下（不会溢出）
+    pool.style.removeProperty('--sw');
     const k = getPoolSize() / 100;
-    let fs = Math.max(40, Math.min(innerHeight * 0.55, innerWidth * 0.3) * k);
-    if (!pool.classList.contains('pool-compact')) fs = parseFloat(getComputedStyle(document.getElementById('poolTurn')).fontSize) * k;
-    pool.style.setProperty('--pt', fs.toFixed(1) + 'px');
-    let guard = 80;
-    while ((poolNeeded(pool) > avail || poolTurnCollides(pool)) && fs > 40 && guard--) {
-      fs = Math.max(40, fs * 0.97);
+    if (!pool.classList.contains('pool-compact')) {
+      // 手机竖排：保持原来的算法
+      let pf = 1;
+      while (poolNeeded(pool) > avail && pf > 0.4) { pf = Math.max(0.4, pf - 0.05); pool.style.setProperty('--pf', pf.toFixed(2)); }
+      let fs = parseFloat(getComputedStyle(document.getElementById('poolTurn')).fontSize) * k, guard = 80;
       pool.style.setProperty('--pt', fs.toFixed(1) + 'px');
+      while ((poolNeeded(pool) > avail || poolTurnCollides(pool)) && fs > 40 && guard--) { fs = Math.max(40, fs * 0.97); pool.style.setProperty('--pt', fs.toFixed(1) + 'px'); }
+      return fs;
     }
-    return fs;
+    // 拉杆映射：200% = 不重叠前提下能放下的最大字号；100%（默认）= 最大值的 80%；50% = 40%。每一格都会变
+    const swMax = 0.62;
+    const maxFs = poolTryFit(pool, avail, Math.min(innerHeight, innerWidth * 0.6), 0.3, swMax);
+    const f = k <= 1 ? 0.4 + (k - 0.5) / 0.5 * 0.4 : 0.8 + Math.min(1, k - 1) * 0.2;
+    const t = Math.max(0, Math.min(1, k - 1));
+    return poolTryFit(pool, avail, maxFs * f, 0.4 - 0.1 * t, 1 - (1 - swMax) * t);
   }
   function fitPool() {
     const pool = document.getElementById('pool');
