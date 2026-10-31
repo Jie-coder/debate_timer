@@ -171,6 +171,15 @@
         <p class="background-hint">支持 JPG、PNG、WebP（不超过 10 MB）。图片居中铺满，适用于所有环节，仅保存在本机浏览器。</p>
         <p id="backgroundStatus" class="background-hint" role="status" aria-live="polite"></p>
       </div>
+      <div class="field-row pool-size-row">
+        <span class="field-label">自由辩论 25 秒数字大小</span>
+        <div class="pool-size">
+          <input type="range" id="poolSize" min="50" max="200" step="5" value="100" aria-label="自由辩论 25 秒数字大小">
+          <b id="poolSizeVal">100%</b>
+          <button class="chip" id="poolSizeReset" type="button" title="恢复默认 100%">恢复默认</button>
+        </div>
+        <p class="background-hint">100% = 自动铺满；调大放不下时会自动缩到刚好放得下，不会溢出。</p>
+      </div>
       <div class="field-row vf-font-row" style="display:none">
         <span class="field-label">字体大小</span>
         <div class="chip-group" id="fontGroup">

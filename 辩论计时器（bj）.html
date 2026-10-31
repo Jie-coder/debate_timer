@@ -5058,6 +5058,18 @@ html body[data-theme] .duel-status:empty { visibility: hidden !important; backgr
   /* 自由辩论：上下留白跟屏幕高度走（1080p 不变，矮屏少留白），把空间让给 25 秒数字 */
   html body[data-theme][data-screen="pool"] main { padding-top: clamp(12px, 4.4vh, 48px) !important; padding-bottom: clamp(12px, 4.4vh, 48px) !important; }
 }
+/* 设置里的「25 秒数字大小」拉杆（滑杆外观沿用上面 7 套主题的 input[type=range]） */
+html body[data-theme] .pool-size-row { flex-wrap: wrap; }
+html body[data-theme] .pool-size { display: flex; align-items: center; gap: 10px; flex: 1 1 220px; min-width: 0; }
+html body[data-theme] .pool-size input[type="range"] { flex: 1 1 auto; min-width: 120px; }
+html body[data-theme] .pool-size b { min-width: 3.4em; text-align: right; font-variant-numeric: tabular-nums; color: var(--vf-ink, var(--ink)); }
+html body[data-theme] .pool-size-row .background-hint { flex-basis: 100%; margin: 4px 0 0; }
+@media (min-width: 900px) and (orientation: landscape) {
+  /* 自由辩论：辩题挪到标题右侧同一行（标题大小不变），上下留白再收紧，空间留给 25 秒数字 */
+  html body[data-theme][data-screen="pool"] header .brand { align-items: center !important; }
+  html body[data-theme][data-screen="pool"] header .brand-topic { margin: 0 0 0 12px !important; min-width: 0 !important; width: clamp(150px, 15vw, 460px) !important; max-width: 15vw !important; align-self: center !important; }
+  html body[data-theme][data-screen="pool"] main { padding-top: clamp(6px, 2vh, 32px) !important; padding-bottom: clamp(6px, 2vh, 32px) !important; }
+}
 
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
@@ -5215,6 +5227,15 @@ html body[data-theme] .duel-status:empty { visibility: hidden !important; backgr
         <img id="backgroundPreview" class="background-preview" alt="当前背景预览" hidden>
         <p class="background-hint">支持 JPG、PNG、WebP（不超过 10 MB）。图片居中铺满，适用于所有环节，仅保存在本机浏览器。</p>
         <p id="backgroundStatus" class="background-hint" role="status" aria-live="polite"></p>
+      </div>
+      <div class="field-row pool-size-row">
+        <span class="field-label">自由辩论 25 秒数字大小</span>
+        <div class="pool-size">
+          <input type="range" id="poolSize" min="50" max="200" step="5" value="100" aria-label="自由辩论 25 秒数字大小">
+          <b id="poolSizeVal">100%</b>
+          <button class="chip" id="poolSizeReset" type="button" title="恢复默认 100%">恢复默认</button>
+        </div>
+        <p class="background-hint">100% = 自动铺满；调大放不下时会自动缩到刚好放得下，不会溢出。</p>
       </div>
       <div class="field-row vf-font-row" style="display:none">
         <span class="field-label">字体大小</span>
@@ -7280,19 +7301,57 @@ html body[data-theme] .duel-status:empty { visibility: hidden !important; backgr
     });
     return h;
   }
+  // 25 秒数字大小拉杆（50%–200%，默认 100% = 自动大小），存在 localStorage
+  const POOL_SIZE_KEY = 'debate-timer-pool-size';
+  function getPoolSize() {
+    let v = 100;
+    try { v = parseInt(localStorage.getItem(POOL_SIZE_KEY), 10); } catch (e) {}
+    return Number.isFinite(v) ? Math.max(50, Math.min(200, v)) : 100;
+  }
+  function setPoolSize(v) {
+    v = Math.max(50, Math.min(200, Math.round(+v / 5) * 5 || 100));
+    try { localStorage.setItem(POOL_SIZE_KEY, String(v)); } catch (e) {}
+    const el = document.getElementById('poolSize'), lab = document.getElementById('poolSizeVal');
+    if (el && +el.value !== v) el.value = v;
+    if (lab) lab.textContent = v + '%';
+    fitPool();
+  }
+  (function initPoolSize() {
+    if (typeof document === 'undefined' || !document.getElementById) return;
+    const el = document.getElementById('poolSize'); if (!el) return;
+    const v = getPoolSize(); el.value = v;
+    const lab = document.getElementById('poolSizeVal'); if (lab) lab.textContent = v + '%';
+    el.addEventListener('input', () => setPoolSize(el.value));
+    const rs = document.getElementById('poolSizeReset');
+    if (rs) rs.addEventListener('click', (e) => { e.currentTarget.blur(); setPoolSize(100); });
+  })();
+  // 数字与正方/反方框、其它元素有重叠（或超出舞台宽度）就算放不下
+  function poolTurnCollides(pool) {
+    const t = document.getElementById('poolTurn'); if (!t) return false;
+    const a = t.getBoundingClientRect(), st = pool.parentElement.getBoundingClientRect();
+    if (a.left < st.left - 1 || a.right > st.right + 1) return true;
+    return [...pool.querySelectorAll(':scope > *, :scope > .pool-sides > *')].some(k => {
+      if (k === t || k.classList.contains('pool-sides') || k.offsetParent === null) return false;
+      const b = k.getBoundingClientRect();
+      return b.width > 0 && b.height > 0 && a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
+    });
+  }
   function fitPoolMode(pool, avail) {
     pool.style.removeProperty('--pf');
     pool.style.removeProperty('--pt');
     let pf = 1;
-    while (poolNeeded(pool) > avail && pf > 0.55) {
-      pf = Math.max(0.55, pf - 0.05);
+    while (poolNeeded(pool) > avail && pf > 0.4) {
+      pf = Math.max(0.4, pf - 0.05);
       pool.style.setProperty('--pf', pf.toFixed(2));
     }
-    const turn = document.getElementById('poolTurn');
-    const fs0 = parseFloat(getComputedStyle(turn).fontSize);
-    let fs = fs0, guard = 60;
-    while (poolNeeded(pool) > avail && fs > 40 && guard--) {
-      fs = Math.max(40, fs * 0.95);
+    // 先按「屏幕高 55% / 宽 30%」× 拉杆倍数设目标字号，再缩到刚好放得下（不会溢出）
+    const k = getPoolSize() / 100;
+    let fs = Math.max(40, Math.min(innerHeight * 0.55, innerWidth * 0.3) * k);
+    if (!pool.classList.contains('pool-compact')) fs = parseFloat(getComputedStyle(document.getElementById('poolTurn')).fontSize) * k;
+    pool.style.setProperty('--pt', fs.toFixed(1) + 'px');
+    let guard = 80;
+    while ((poolNeeded(pool) > avail || poolTurnCollides(pool)) && fs > 40 && guard--) {
+      fs = Math.max(40, fs * 0.97);
       pool.style.setProperty('--pt', fs.toFixed(1) + 'px');
     }
     return fs;
@@ -7301,7 +7360,7 @@ html body[data-theme] .duel-status:empty { visibility: hidden !important; backgr
     const pool = document.getElementById('pool');
     if (!pool) return;
     const st = pool.parentElement;
-    const avail = st.clientHeight - Math.max(14, st.clientHeight * 0.035) * 2;
+    const avail = st.clientHeight - Math.max(6, st.clientHeight * 0.012) * 2;
     if (avail <= 0) return;
     // 横屏电脑：固定用两侧布局，字号按舞台高度算，不同屏幕比例一致；竖屏 / 手机仍用竖排
     if (innerWidth > 640 && innerWidth >= innerHeight) {

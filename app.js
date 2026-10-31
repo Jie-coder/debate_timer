@@ -1121,19 +1121,57 @@
     });
     return h;
   }
+  // 25 秒数字大小拉杆（50%–200%，默认 100% = 自动大小），存在 localStorage
+  const POOL_SIZE_KEY = 'debate-timer-pool-size';
+  function getPoolSize() {
+    let v = 100;
+    try { v = parseInt(localStorage.getItem(POOL_SIZE_KEY), 10); } catch (e) {}
+    return Number.isFinite(v) ? Math.max(50, Math.min(200, v)) : 100;
+  }
+  function setPoolSize(v) {
+    v = Math.max(50, Math.min(200, Math.round(+v / 5) * 5 || 100));
+    try { localStorage.setItem(POOL_SIZE_KEY, String(v)); } catch (e) {}
+    const el = document.getElementById('poolSize'), lab = document.getElementById('poolSizeVal');
+    if (el && +el.value !== v) el.value = v;
+    if (lab) lab.textContent = v + '%';
+    fitPool();
+  }
+  (function initPoolSize() {
+    if (typeof document === 'undefined' || !document.getElementById) return;
+    const el = document.getElementById('poolSize'); if (!el) return;
+    const v = getPoolSize(); el.value = v;
+    const lab = document.getElementById('poolSizeVal'); if (lab) lab.textContent = v + '%';
+    el.addEventListener('input', () => setPoolSize(el.value));
+    const rs = document.getElementById('poolSizeReset');
+    if (rs) rs.addEventListener('click', (e) => { e.currentTarget.blur(); setPoolSize(100); });
+  })();
+  // 数字与正方/反方框、其它元素有重叠（或超出舞台宽度）就算放不下
+  function poolTurnCollides(pool) {
+    const t = document.getElementById('poolTurn'); if (!t) return false;
+    const a = t.getBoundingClientRect(), st = pool.parentElement.getBoundingClientRect();
+    if (a.left < st.left - 1 || a.right > st.right + 1) return true;
+    return [...pool.querySelectorAll(':scope > *, :scope > .pool-sides > *')].some(k => {
+      if (k === t || k.classList.contains('pool-sides') || k.offsetParent === null) return false;
+      const b = k.getBoundingClientRect();
+      return b.width > 0 && b.height > 0 && a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
+    });
+  }
   function fitPoolMode(pool, avail) {
     pool.style.removeProperty('--pf');
     pool.style.removeProperty('--pt');
     let pf = 1;
-    while (poolNeeded(pool) > avail && pf > 0.55) {
-      pf = Math.max(0.55, pf - 0.05);
+    while (poolNeeded(pool) > avail && pf > 0.4) {
+      pf = Math.max(0.4, pf - 0.05);
       pool.style.setProperty('--pf', pf.toFixed(2));
     }
-    const turn = document.getElementById('poolTurn');
-    const fs0 = parseFloat(getComputedStyle(turn).fontSize);
-    let fs = fs0, guard = 60;
-    while (poolNeeded(pool) > avail && fs > 40 && guard--) {
-      fs = Math.max(40, fs * 0.95);
+    // 先按「屏幕高 55% / 宽 30%」× 拉杆倍数设目标字号，再缩到刚好放得下（不会溢出）
+    const k = getPoolSize() / 100;
+    let fs = Math.max(40, Math.min(innerHeight * 0.55, innerWidth * 0.3) * k);
+    if (!pool.classList.contains('pool-compact')) fs = parseFloat(getComputedStyle(document.getElementById('poolTurn')).fontSize) * k;
+    pool.style.setProperty('--pt', fs.toFixed(1) + 'px');
+    let guard = 80;
+    while ((poolNeeded(pool) > avail || poolTurnCollides(pool)) && fs > 40 && guard--) {
+      fs = Math.max(40, fs * 0.97);
       pool.style.setProperty('--pt', fs.toFixed(1) + 'px');
     }
     return fs;
@@ -1142,7 +1180,7 @@
     const pool = document.getElementById('pool');
     if (!pool) return;
     const st = pool.parentElement;
-    const avail = st.clientHeight - Math.max(14, st.clientHeight * 0.035) * 2;
+    const avail = st.clientHeight - Math.max(6, st.clientHeight * 0.012) * 2;
     if (avail <= 0) return;
     // 横屏电脑：固定用两侧布局，字号按舞台高度算，不同屏幕比例一致；竖屏 / 手机仍用竖排
     if (innerWidth > 640 && innerWidth >= innerHeight) {

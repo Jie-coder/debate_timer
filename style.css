@@ -5044,3 +5044,15 @@ html body[data-theme] .duel-status:empty { visibility: hidden !important; backgr
   /* 自由辩论：上下留白跟屏幕高度走（1080p 不变，矮屏少留白），把空间让给 25 秒数字 */
   html body[data-theme][data-screen="pool"] main { padding-top: clamp(12px, 4.4vh, 48px) !important; padding-bottom: clamp(12px, 4.4vh, 48px) !important; }
 }
+/* 设置里的「25 秒数字大小」拉杆（滑杆外观沿用上面 7 套主题的 input[type=range]） */
+html body[data-theme] .pool-size-row { flex-wrap: wrap; }
+html body[data-theme] .pool-size { display: flex; align-items: center; gap: 10px; flex: 1 1 220px; min-width: 0; }
+html body[data-theme] .pool-size input[type="range"] { flex: 1 1 auto; min-width: 120px; }
+html body[data-theme] .pool-size b { min-width: 3.4em; text-align: right; font-variant-numeric: tabular-nums; color: var(--vf-ink, var(--ink)); }
+html body[data-theme] .pool-size-row .background-hint { flex-basis: 100%; margin: 4px 0 0; }
+@media (min-width: 900px) and (orientation: landscape) {
+  /* 自由辩论：辩题挪到标题右侧同一行（标题大小不变），上下留白再收紧，空间留给 25 秒数字 */
+  html body[data-theme][data-screen="pool"] header .brand { align-items: center !important; }
+  html body[data-theme][data-screen="pool"] header .brand-topic { margin: 0 0 0 12px !important; min-width: 0 !important; width: clamp(150px, 15vw, 460px) !important; max-width: 15vw !important; align-self: center !important; }
+  html body[data-theme][data-screen="pool"] main { padding-top: clamp(6px, 2vh, 32px) !important; padding-bottom: clamp(6px, 2vh, 32px) !important; }
+}
