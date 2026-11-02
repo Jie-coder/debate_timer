@@ -53,3 +53,42 @@ npm run build
 - 单计时要保持大尺寸。
 - 双计时要避免文字、重置按钮、进度条和数字重叠。
 - 样式跟随主题变量，不写死无法切换的整页配色。
+
+## Project guide: Jie's Debate Timer
+
+### What it is
+"Jie's Debate Timer": a static debate timer (single and dual timers, 7 themes) plus live audience voting (`vote.html`).
+
+### Stack
+- Plain HTML/CSS/JS, no framework: `index.html`, `style.css`, `app.js`; voting in `vote.html`, `vote-core.js`, `vote-host.js`
+- Node scripts only for build/check (`scripts/`)
+- Supabase for vote data (org "Debate Timer", project `debate-timer-vote`, ref jntofwvrdpsowrkigkxs, Singapore, free tier; on Kai's account, not Bing Jie's)
+
+### Run locally
+```
+python -m http.server 8017 --bind 127.0.0.1   # open /index.html
+npm run check    # static checks + duel-flow + vote-core tests; run before every push
+npm run build    # writes dist/debate-timer.single.html and 辩论计时器（bj）.html; commit dist/
+```
+
+### Deploy
+- Commit + push to `main` (no PRs).
+- GitHub Pages updates automatically on push.
+- Vercel project `debate-timer-vote` (linked via a local, untracked `.vercel/project.json`), auto-deploys on push; manual: `vercel deploy --prod --yes`. `vercel.json`: buildCommand `node scripts/gen-config.js` (writes `config.js` from env), outputDirectory `.`, cleanUrls.
+- Vercel env var names: SUPABASE_URL, SUPABASE_ANON_KEY, optional VOTE_BASE_URL.
+
+### Live URLs
+- https://jie-coder.github.io/debate_timer/ (must not change)
+- https://jie-debate-timer.vercel.app (primary Vercel URL)
+- https://debate-timer-vote.vercel.app (old alias, keep)
+
+### Gotchas
+- `config.js` is committed (Pages needs it) and holds only the public anon key; `config.example.js` is the template. `.env.local` must never be committed.
+- No `?v=` query strings on CSS/JS refs; `npm run check` fails. Ask the user to Ctrl+Shift+R instead.
+- Check `git status` before committing: OpenCode once deleted `dist/`, and it tends to over-edit, so read the diff.
+- No overlap at 720p, 1080p, 390px and all 7 themes; themed controls only.
+- Settings live in localStorage.
+- Reply to Bing Jie in Simplified Chinese with screenshots (`/workspace/debate-timer-shots/<date>/`).
+
+### Owner
+Peter · SWE (coding bot) for Bing Jie Tan (taken over from Kai, 2026-11-02).
