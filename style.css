@@ -5056,3 +5056,8 @@ html body[data-theme] .pool-size-row .background-hint { flex-basis: 100%; margin
   html body[data-theme][data-screen="pool"] header .brand-topic { margin: 0 0 0 12px !important; min-width: 0 !important; width: clamp(150px, 15vw, 460px) !important; max-width: 15vw !important; align-self: center !important; }
   html body[data-theme][data-screen="pool"] main { padding-top: clamp(6px, 2vh, 32px) !important; padding-bottom: clamp(6px, 2vh, 32px) !important; }
 }
+
+/* 25 秒数字大小：仅雅哲杯显示；触控目标 ≥ 44px */
+html body[data-theme] .pool-size-row[hidden] { display: none !important; }
+html body[data-theme] .pool-size input[type="range"] { min-height: 44px; }
+html body[data-theme] .pool-size .chip { min-height: 44px; }
