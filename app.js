@@ -183,7 +183,7 @@
     proStance: '',
     conStance: '',
     topic: '',
-    matchStage: '',
+    matchStage: '', activePreset: null,
     voteEnabled: false,
     // runtime
     running: false,
@@ -263,6 +263,7 @@
       autoFlow: state.autoFlow, proName: state.proName, conName: state.conName,
       proStance: state.proStance, conStance: state.conStance,
       topic: state.topic, matchStage: state.matchStage, voteEnabled: state.voteEnabled,
+      activePreset: state.activePreset,
     };
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch (e) {}
   }
@@ -1160,6 +1161,14 @@
     if (lab) lab.textContent = v + '%';
     fitPool();
   }
+  // 25 秒数字大小区块只在套用内置「雅哲杯」赛制时显示
+  const POOL_SIZE_PRESET = '雅哲杯';
+  function poolSizeVisible(activePreset) { return activePreset === POOL_SIZE_PRESET; }
+  function updatePoolSizeVisibility() {
+    if (typeof document === 'undefined' || !document.querySelector) return;
+    const row = document.querySelector('.pool-size-row'); if (!row) return;
+    row.hidden = !poolSizeVisible(state.activePreset);
+  }
   (function initPoolSize() {
     if (typeof document === 'undefined' || !document.getElementById) return;
     const el = document.getElementById('poolSize'); if (!el) return;
@@ -2054,6 +2063,7 @@
     const preset = BUILT_IN_PRESETS.find(p => p.name === name);
     if (!preset) return;
     applyStageSet(preset.stages, preset.name);
+    state.activePreset = preset.name; saveState(); updatePoolSizeVisibility();
   }
 
   function loadTimerPreset(id) {
@@ -2061,6 +2071,7 @@
     if (!preset) return;
     state.running = false;
     state.stages = cloneStages(preset.stages);
+    state.activePreset = null; updatePoolSizeVisibility();
     ensureCoverStage();
     ensureVoteStages();
     state.currentId = state.stages.find(s => s.id === preset.currentId) ? preset.currentId : state.stages[0].id;
@@ -2217,6 +2228,7 @@
     if (!stages) { setShareStatus('认不出这段代码'); return; }
     const topic = stages.topic;
     applyStageSet(stages, '分享的赛制');
+    state.activePreset = null; saveState(); updatePoolSizeVisibility();
     if (topic) {
       state.topic = topic;
       syncHeaderTopic();
@@ -2458,6 +2470,7 @@
 
   /* ---------------- Init ---------------- */
   loadState();
+  updatePoolSizeVisibility();
   timerPresets = loadTimerPresets();
   // ensureCoverStage() 会用 map() 换掉整个 stages 数组，必须跑在 renderStagesList()
   // 之前，否则抽屉里每一行闭包住的都是已经被丢弃的环节对象，
