@@ -1247,7 +1247,8 @@
       b.classList.toggle('active', on);
       b.classList.toggle('inactive', !on);
       const st = document.getElementById('poolSideStatus_' + k);
-      if (st) st.textContent = ended ? '已结束' : on ? (state.running ? '发言中' : '待开始') : '待命';
+      // 自由辩论不显示任何小字状态（待命 / 发言中 / 待开始 / 已结束），和双计时一致；span 留空只占格子
+      if (st) st.textContent = '';
       const nm = document.getElementById('poolSideName_' + k);
       if (nm) nm.textContent = (k === 'pro' ? state.proName : state.conName) || '';
     });
@@ -1673,7 +1674,39 @@
     else api.exit.call(document);
   }
 
+  /* ---------------- 屏幕常亮（Screen Wake Lock） ----------------
+     计时进行中请求 wake lock，手机 / 平板不会中途熄屏；暂停、停止、时间到就释放。
+     切到后台时浏览器会自动释放，切回来（visibilitychange）若仍在计时就重新申请。
+     不支持的浏览器（或非 HTTPS / file://）静默跳过。 */
+  let wakeLock = null;
+  let wakeLockPending = false;
+  function wakeLockSupported() {
+    return typeof navigator !== 'undefined' && 'wakeLock' in navigator && navigator.wakeLock && typeof navigator.wakeLock.request === 'function';
+  }
+  function syncWakeLock() {
+    if (!wakeLockSupported()) return;
+    const want = !!state.running && !isTimerless(curMode()) && document.visibilityState === 'visible';
+    if (want && !wakeLock && !wakeLockPending) {
+      wakeLockPending = true;
+      navigator.wakeLock.request('screen').then(lock => {
+        wakeLockPending = false;
+        wakeLock = lock;
+        lock.addEventListener('release', () => { if (wakeLock === lock) wakeLock = null; });
+        // 申请期间若已暂停，立刻放掉
+        if (!state.running) syncWakeLock();
+      }).catch(() => { wakeLockPending = false; });
+    } else if (!want && wakeLock) {
+      const lock = wakeLock;
+      wakeLock = null;
+      lock.release().catch(() => {});
+    }
+  }
+  document.addEventListener('visibilitychange', syncWakeLock);
+  // 兜底：少数路径直接改 state.running 而没走 updateStartButton
+  setInterval(syncWakeLock, 2000);
+
   function updateStartButton() {
+    syncWakeLock();
     const label = document.getElementById('startLabel');
     const icon = document.getElementById('iconPlay');
     const btn = document.getElementById('btnStart');
@@ -2048,13 +2081,17 @@
   }
 
   /* ---------------- Share format (分享赛制) ----------------
-     只带环节（名称 / 单双计时 / 时长 / 交锋独立），不带主题、背景、辩题和队伍。
+     带环节（名称 / 单双计时 / 时长 / 交锋独立）和辩题，不带主题、背景和队伍。
+     辩题放在数组最后一个元素 {t: '辩题'}（对象不是数组）：旧版解码器会跳过非数组元素，
+     所以新码在旧版也能导入环节；旧码没有这个元素，导入时就不改当前辩题。
      复制出去的文本形如「【Jie's Debate Timer 赛制】11 环节 · 32:00｜DT1.xxxx」，导入时只认其中的
      DT1.xxxx，所以连同聊天里的其他文字一起粘贴也能识别。 */
   const SHARE_PREFIX = 'DT1.';
   const SHARE_MAX_STAGES = 40;
 
-  function encodeFormat(stages) {
+  const SHARE_TOPIC_MAX = 80;
+
+  function encodeFormat(stages, topic) {
     const rows = stages.filter(s => s.type !== 'cover' && s.type !== 'vote-pre' && s.type !== 'vote-final').map(s => {
       const row = [s.name, s.type === 'duel' ? 1 : s.type === 'pool' ? 2 : 0, s.duration];
       if (s.type === 'pool') { row.push(poolTurnCap(s)); if (s.tag) row.push(String(s.tag)); }
@@ -2062,6 +2099,8 @@
       if (s.type === 'duel') row.push(duelFlowOf(s) === 'solo' ? 1 : 0);
       return row;
     });
+    const t = String(topic || '').trim().slice(0, SHARE_TOPIC_MAX);
+    if (t) rows.push({ t });
     const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(rows))));
     return SHARE_PREFIX + b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   }
@@ -2076,6 +2115,11 @@
       const rows = JSON.parse(decodeURIComponent(escape(atob(b64))));
       if (!Array.isArray(rows)) return null;
       const stages = [];
+      let topic = null;
+      const last = rows[rows.length - 1];
+      if (last && typeof last === 'object' && !Array.isArray(last) && typeof last.t === 'string') {
+        topic = last.t.trim().slice(0, SHARE_TOPIC_MAX) || null;
+      }
       rows.slice(0, SHARE_MAX_STAGES).forEach(row => {
         if (!Array.isArray(row)) return;
         const name = String(row[0] == null ? '' : row[0]).trim().slice(0, 10);
@@ -2089,7 +2133,9 @@
         if (st.type === 'duel' && (row[3] === 0 || row[3] === 1)) st.duelFlow = row[3] === 1 ? 'solo' : 'relay';
         stages.push(st);
       });
-      return stages.length ? stages : null;
+      if (!stages.length) return null;
+      stages.topic = topic;
+      return stages;
     } catch (e) {
       return null;
     }
@@ -2126,7 +2172,7 @@
     const stages = state.stages.filter(s => s.type !== 'cover' && s.type !== 'vote-pre' && s.type !== 'vote-final');
     if (!stages.length) { setShareStatus('还没有环节'); return; }
     const totalSeconds = stages.reduce((sum, stg) => sum + (Number(stg.duration) || 0) * stageTotalFactor(stg), 0);
-    const text = '【Jie\'s Debate Timer 赛制】' + stages.length + ' 环节 · ' + formatTime(totalSeconds) + '｜' + encodeFormat(stages);
+    const text = '【Jie\'s Debate Timer 赛制】' + stages.length + ' 环节 · ' + formatTime(totalSeconds) + '｜' + encodeFormat(stages, state.topic);
     // 同时填进输入框并选中：万一浏览器不让复制，还能手动 Ctrl+C
     const input = document.getElementById('shareCodeInput');
     if (input) { input.value = text; input.select(); }
@@ -2145,9 +2191,16 @@
     if (!text) { setShareStatus('先粘贴赛制代码'); return; }
     const stages = decodeFormat(text);
     if (!stages) { setShareStatus('认不出这段代码'); return; }
+    const topic = stages.topic;
     applyStageSet(stages, '分享的赛制');
+    if (topic) {
+      state.topic = topic;
+      syncHeaderTopic();
+      syncCoverFields();
+      saveState();
+    }
     if (input) input.value = '';
-    setShareStatus('已导入 ' + stages.length + ' 个环节');
+    setShareStatus('已导入 ' + stages.length + ' 个环节' + (topic ? '和辩题' : ''));
   }
 
   /* ---------------- Drawer ---------------- */
