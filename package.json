@@ -5,8 +5,8 @@
   "description": "辩论计时器源码版，可维护的单页计时工具。",
   "scripts": {
     "build": "node scripts/build-single.js",
-    "check": "node scripts/check.js && node scripts/test-duel-flow.js && node scripts/test-vote-core.js",
-    "test": "node scripts/test-duel-flow.js && node scripts/test-vote-core.js",
+    "check": "node scripts/check.js && node scripts/test-duel-flow.js && node scripts/test-vote-core.js && node scripts/test-presets.js",
+    "test": "node scripts/test-duel-flow.js && node scripts/test-vote-core.js && node scripts/test-presets.js",
     "gen-config": "node scripts/gen-config.js"
   }
 }
